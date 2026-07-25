@@ -428,6 +428,32 @@ describe('computeConfidence', () => {
         expect(score).toBe(100);
     });
 
+    it('caps averageRating contribution when rating exceeds 5 stars', () => {
+        // averageRating > 5 should not contribute more than the max 12 points from ratings.
+        const overRated = computeConfidence(makeBookData(), 8.0, 9999);
+        // Full metadata (50) + capped rating contribution (12) + capped count contribution (8).
+        expect(overRated).toBe(70);
+    });
+
+    it('ignores negative averageRating', () => {
+        // Negative ratings should be ignored per the > 0 guard.
+        const score = computeConfidence(makeBookData(), -1.0, undefined, 'Test Book Author');
+        expect(score).toBe(80); // metadata (50) + full query match (30)
+    });
+
+    it('ignores zero ratingsCount', () => {
+        // ratingsCount === 0 should not contribute points per the > 0 guard.
+        const withZero = computeConfidence(makeBookData(), undefined, 0);
+        const without = computeConfidence(makeBookData());
+        expect(withZero).toBe(without);
+    });
+
+    it('caps ratingsCount contribution at its max', () => {
+        // ratingsCount > 100 should contribute only up to the max 8 points.
+        const score = computeConfidence(makeBookData(), undefined, 5000);
+        expect(score).toBe(58); // metadata (50) + capped count contribution (8)
+    });
+
     it('scores partial metadata correctly', () => {
         // Only title + authors = 10 + 10 = 20
         const score = computeConfidence(makeBookData({
