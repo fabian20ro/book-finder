@@ -286,3 +286,61 @@ test('clearCandidates() empties candidates, resets filter, emits change', () => 
   expect(state.books).toHaveLength(1);
   off();
 });
+
+test('moveBook(a,b) reorders two positions and emits change', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'a', title: 'Alpha', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'b', title: 'Beta', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'c', title: 'Gamma', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  moveBook(2, 0); // move Gamma to the front
+
+  const state = getState();
+  expect(state.books[0].id).toBe('c');
+  expect(state.books[1].id).toBe('a');
+  expect(state.books[2].id).toBe('b');
+  off();
+});
+
+test('moveBook(a,a) is a no-op', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'x', title: 'X', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'y', title: 'Y', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const before = getState().books.map((b) => b.id);
+  moveBook(0, 0);
+  expect(getState().books.map((b) => b.id)).toEqual(before);
+  off();
+});
+
+test('moveBook() with out-of-bounds index is a no-op', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'x', title: 'X', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'y', title: 'Y', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const before = getState().books.map((b) => b.id);
+  moveBook(-1, 1);
+  expect(getState().books.map((b) => b.id)).toEqual(before);
+  moveBook(99, 0);
+  expect(getState().books.map((b) => b.id)).toEqual(before);
+
+  const state = getState();
+  expect(state.books).toHaveLength(2);
+  off();
+});
+
+test('moveBook() emits change event', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  addBook({ id: 'p', title: 'P', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'q', title: 'Q', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  emitted = false;
+  moveBook(1, 0);
+  expect(emitted).toBe(true);
+  off();
+});

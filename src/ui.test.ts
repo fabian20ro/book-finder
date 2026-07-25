@@ -806,6 +806,28 @@ describe('ui', () => {
             clearCandidates();
             expect(searchInput.value).toBe('');
         });
+
+        it('makes popup visible and focuses search input when candidates first appear', () => {
+            // Setup spy BEFORE any state change — the focus call happens synchronously inside renderUI()
+            const searchInput = document.getElementById('candidate-search')!;
+            const focusSpy = vi.spyOn(searchInput, 'focus');
+
+            addCandidates([makeBook({ id: 'c1' })]);
+
+            expect(document.getElementById('book-popup')!.hidden).toBe(false);
+            // The popup was hidden before this call → focus must be called once
+            expect(focusSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not re-focus search input when candidates update while popup is already visible', () => {
+            addCandidates([makeBook({ id: 'c1' })]); // first add triggers initial focus
+
+            const focusSpy = vi.spyOn(document.getElementById('candidate-search')!, 'focus');
+            focusSpy.mockClear();
+            // Popup is already visible; adding another candidate should NOT refocus the input
+            addCandidates([makeBook({ id: 'c2' })]);
+            expect(focusSpy).not.toHaveBeenCalled();
+        });
     });
 
     describe('book popup dismissal', () => {
