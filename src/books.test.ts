@@ -328,6 +328,50 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('search — edge cases', () => {
+        it('returns empty array for non-string types and whitespace-only queries without calling fetch', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v1', 'Numeric Book')])));
+
+            await searcher.search(42 as any);
+            expect(fetch).not.toHaveBeenCalled();
+
+            await searcher.search(true as any);
+            expect(fetch).not.toHaveBeenCalled();
+
+            await searcher.search({} as any);
+            expect(fetch).not.toHaveBeenCalled();
+
+            const results = await searcher.search('   ');
+            expect(fetch).not.toHaveBeenCalled();
+            expect(results).toEqual([]);
+        });
+    });
+
+    describe('queryMatchRatio — empty metadata edge case', () => {
+        const emptyBook = (title?: string) => ({
+            id: 'b-empty',
+            title: title ?? 'Unknown Title',
+            authors: [] as string[],
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+            infoLink: null,
+        });
+
+        it('returns 0 when all book metadata fields are null or empty', () => {
+            const score = queryMatchRatio(emptyBook(), 'something else');
+            expect(score).toBe(0);
+        });
+
+        it('returns 0 when query words are all single letters that get filtered out', () => {
+            const score = queryMatchRatio(emptyBook('Test'), 'I a an');
+            expect(score).toBe(0);
+        });
+    });
+
     describe('preloadBookId', () => {
         it('prevents book from appearing in search results', async () => {
             searcher.preloadBookId('v1');
