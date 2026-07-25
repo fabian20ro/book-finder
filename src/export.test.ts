@@ -316,6 +316,18 @@ describe('shareBooks', () => {
         expect(notify).not.toHaveBeenCalled();
     });
 
+    it('escapes HTML special characters in window fallback content', async () => {
+        const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
+        const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn() } };
+        vi.spyOn(window, 'open').mockReturnValue(mockWin);
+
+        await shareBooks([makeBook({ title: 'A <script> Book' })], notify);
+
+        const html = mockWin.document.write.mock.calls[0][0];
+        expect(html).not.toContain('<script>');
+        expect(html).toContain('&lt;script&gt;');
+    });
+
     it('notifies when clipboard fails and window write also throws', async () => {
         const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
         const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn().mockImplementation(() => { throw new Error('Write failed'); }) } };
