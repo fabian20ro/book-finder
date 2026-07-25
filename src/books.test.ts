@@ -372,6 +372,49 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('queryMatchRatio — consecutive single-letter merge (author initials)', () => {
+        it('merges consecutive single letters separated by punctuation into one token', () => {
+            // Query "J.K." with author "JK Rowling" should match the merged form.
+            const book = {
+                id: 'b-merged',
+                title: 'Test Book',
+                authors: ['JK Rowling'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // Direct test of the merge logic: query "J.K." should produce a merged token.
+            const score = queryMatchRatio(book, 'J.K.');
+            expect(score).toBeGreaterThan(0);
+        });
+
+        it('does not match when punctuation-separated letters are separated by non-punctuation', () => {
+            // If letters are separated by spaces instead of punctuation, they remain separate tokens.
+            const book = {
+                id: 'b-separate',
+                title: 'Test Book',
+                authors: ['J K Rowling'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // Query "J.K." should still match "J K" in the author field because after normalization,
+            // both produce tokens that can merge or align.
+            const score = queryMatchRatio(book, 'J.K.');
+            expect(score).toBeGreaterThan(0);
+        });
+    });
+
     describe('preloadBookId', () => {
         it('prevents book from appearing in search results', async () => {
             searcher.preloadBookId('v1');

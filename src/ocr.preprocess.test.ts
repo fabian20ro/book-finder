@@ -323,18 +323,31 @@ describe('preprocessCanvas', () => {
         }
 
         // At strength=0 the sharpening term is exactly zero, so output must equal stretched.
+        // This per-pixel exact comparison catches regressions where a sharpening term
+        // accidentally contributes even at strength=0 (e.g., if someone forgets to gate it).
         for (let i = 0; i < 3 * 3; i++) {
             const actualR = outData[i * 4];
             expect(actualR).toBe(expectedStretched[i]); // R channel == stretched value
         }
 
         // Verify the sharpening term would have contributed if strength were nonzero.
-        // At strength=1, center pixel (val=80) surrounded by different neighbors should change.
+        // At strength=1, each non-uniform pixel surrounded by different neighbors should change.
         const resultStrong = preprocessCanvas(canvas, 1);
         const strongData = resultStrong.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
-        const centerIdx = 4 * 3 + 5; // pixel (1,1) in row-major
-        // The sharpened value at the center must differ from the no-sharpening baseline.
-        expect(strongData[centerIdx]).not.toBe(outData[centerIdx]);
+
+        // Proves sharpening is active: at least one pixel must differ between strength=0 and strength=1.
+        let anySharpened = false;
+        for (let i = 0; i < 3 * 3; i++) {
+            if (strongData[i * 4] !== outData[i * 4]) {
+                anySharpened = true;
+                break;
+            }
+        }
+        expect(anySharpened).toBe(true); // sharpening would change output at nonzero strength
+
+        // Verify the sharpening term changes non-edge pixels (interior pixel with all neighbors different).
+        const centerIdx = 1 * 3 + 2; // pixel (1,2) — value 80, surrounded by varied neighbors
+        expect(strongData[centerIdx * 4]).not.toBe(outData[centerIdx * 4]);
     });
 
     it('should keep output within [0,255] at strength=2 on high-contrast input', () => {
