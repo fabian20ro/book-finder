@@ -291,6 +291,15 @@ describe('shareBooks', () => {
         expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
     });
 
+    it('notifies when share is available but clipboard throws because it is missing', async () => {
+        const shareFn = vi.fn().mockRejectedValue(new Error('Share failed'));
+        // No clipboard property at all — accessing .writeText on undefined would throw TypeError before await
+        vi.stubGlobal('navigator', { ...navigator, share: shareFn });
+
+        await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
+        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+    });
+
     it('falls back to a browser window when clipboard throws an error', async () => {
         const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
         const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn() } };
