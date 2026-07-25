@@ -328,6 +328,50 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('search — edge cases', () => {
+        it('returns empty array for non-string types and whitespace-only queries without calling fetch', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v1', 'Numeric Book')])));
+
+            await searcher.search(42 as any);
+            expect(fetch).not.toHaveBeenCalled();
+
+            await searcher.search(true as any);
+            expect(fetch).not.toHaveBeenCalled();
+
+            await searcher.search({} as any);
+            expect(fetch).not.toHaveBeenCalled();
+
+            const results = await searcher.search('   ');
+            expect(fetch).not.toHaveBeenCalled();
+            expect(results).toEqual([]);
+        });
+    });
+
+    describe('queryMatchRatio — empty metadata edge case', () => {
+        const emptyBook = (title?: string) => ({
+            id: 'b-empty',
+            title: title ?? 'Unknown Title',
+            authors: [] as string[],
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+            infoLink: null,
+        });
+
+        it('returns 0 when all book metadata fields are null or empty', () => {
+            const score = queryMatchRatio(emptyBook(), 'something else');
+            expect(score).toBe(0);
+        });
+
+        it('returns 0 when query words are all single letters that get filtered out', () => {
+            const score = queryMatchRatio(emptyBook('Test'), 'I a an');
+            expect(score).toBe(0);
+        });
+    });
+
     describe('preloadBookId', () => {
         it('prevents book from appearing in search results', async () => {
             searcher.preloadBookId('v1');
@@ -426,6 +470,32 @@ describe('computeConfidence', () => {
     it('caps at 100', () => {
         const score = computeConfidence(makeBookData(), 5.0, 200, 'Test Book Author');
         expect(score).toBe(100);
+    });
+
+    it('caps averageRating contribution when rating exceeds 5 stars', () => {
+        // averageRating > 5 should not contribute more than the max 12 points from ratings.
+        const overRated = computeConfidence(makeBookData(), 8.0, 9999);
+        // Full metadata (50) + capped rating contribution (12) + capped count contribution (8).
+        expect(overRated).toBe(70);
+    });
+
+    it('ignores negative averageRating', () => {
+        // Negative ratings should be ignored per the > 0 guard.
+        const score = computeConfidence(makeBookData(), -1.0, undefined, 'Test Book Author');
+        expect(score).toBe(80); // metadata (50) + full query match (30)
+    });
+
+    it('ignores zero ratingsCount', () => {
+        // ratingsCount === 0 should not contribute points per the > 0 guard.
+        const withZero = computeConfidence(makeBookData(), undefined, 0);
+        const without = computeConfidence(makeBookData());
+        expect(withZero).toBe(without);
+    });
+
+    it('caps ratingsCount contribution at its max', () => {
+        // ratingsCount > 100 should contribute only up to the max 8 points.
+        const score = computeConfidence(makeBookData(), undefined, 5000);
+        expect(score).toBe(58); // metadata (50) + capped count contribution (8)
     });
 
     it('scores partial metadata correctly', () => {

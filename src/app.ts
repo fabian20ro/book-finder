@@ -353,7 +353,7 @@ function addBookAndSave(book: Book): boolean {
     if (added) {
         toast(`Found: ${book.title}`);
     } else {
-        toast(`${book.title} is already in your collection`);
+        toast(`${book.title} is already a duplicate — skipped`);
     }
     return added;
 }

@@ -544,7 +544,7 @@ function escapeHtml(str: string): string {
         .replace(/'/g, '&#039;');
 }
 
-function showToast(message: string): void {
+export function showToast(message: string): void {
     const toastEl = document.createElement('div');
     toastEl.className = 'toast';
     toastEl.textContent = message;

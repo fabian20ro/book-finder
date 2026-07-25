@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { update, addBook, addCandidates, clearCandidates, getState } from './state';
-import { initUI, getAllLanguages, showError, hideError, getVisibleLanguages, type UIHandlers } from './ui';
+import { initUI, getAllLanguages, showError, hideError, getVisibleLanguages, showToast, type UIHandlers } from './ui';
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {
@@ -251,8 +251,21 @@ describe('ui', () => {
             addBook(makeBook({ id: 'b2', title: 'Second Book' }));
 
             const list = document.getElementById('home-book-list')!;
-            const cards = list.querySelectorAll('.book-card');
+            const cards = list.querySelectorAll<HTMLElement>('.book-card');
             expect(cards).toHaveLength(2);
+            // Verify each card has correct data-index for event delegation and reorder
+            Array.from(cards).forEach((card, i) => {
+                expect(card.dataset.index).toBe(String(i));
+            });
+            // Titles must be present in DOM for screen readers and tests
+            expect(list.textContent).toContain('First Book');
+            expect(list.textContent).toContain('Second Book');
+            // Remove buttons must exist with correct indices
+            const removeBtns = list.querySelectorAll<HTMLElement>('.btn-remove');
+            expect(removeBtns).toHaveLength(2);
+            Array.from(removeBtns).forEach((btn, i) => {
+                expect(btn.dataset.index).toBe(String(i));
+            });
         });
 
         it('renders book title, authors, ISBN', () => {
@@ -917,6 +930,31 @@ describe('ui', () => {
             update({ candidateFilter: 'xyz' });
             const cards = document.querySelectorAll('.candidate-card');
             expect(cards).toHaveLength(0);
+        });
+    });
+
+    describe('showToast', () => {
+        it('appends a toast element with the given message to the body', () => {
+            showToast('Test notification');
+
+            const toast = document.querySelector('.toast');
+            expect(toast).not.toBeNull();
+            expect((toast as HTMLElement)!.textContent).toBe('Test notification');
+        });
+
+        it('removes itself after a reasonable timeout', async () => {
+            // Stub requestAnimationFrame to be synchronous so CSS class is added immediately.
+            vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
+
+            showToast('Will disappear');
+
+            const toast = document.querySelector('.toast') as HTMLElement;
+            expect(toast).not.toBeNull();
+
+            // Wait for the TOAST_DISPLAY_MS timeout + small buffer.
+            await vi.waitFor(() => {
+                expect(document.querySelector('.toast')).toBeNull();
+            }, { interval: 10, timeout: 3500 });
         });
     });
 });
