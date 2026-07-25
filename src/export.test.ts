@@ -129,6 +129,19 @@ describe('exportToCsv', () => {
         expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count\nTest Book,Author A,,,,0');
     });
 
+    it('produces an empty Authors field when authors array is empty', async () => {
+        // exportToCsv joins authors with ", " — a zero-length array yields "" so the CSV column
+        // becomes empty (no "Unknown" substitution unlike formatBooksAsText). This is observable.
+        const book = makeBook({ authors: [] });
+        exportToCsv([book]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        // Title, Authors(empty), ISBN, Publisher, date, pageCount — "Unknown" must NOT appear in CSV row
+        expect(text).toContain(',9781234567890');
+        expect(text).not.toContain('Unknown');
+    });
+
     it('produces one row per book for multiple books', async () => {
         const books = [makeBook({ title: 'Alpha' }), makeBook({ id: 'b2', title: 'Beta' })];
         exportToCsv(books);
