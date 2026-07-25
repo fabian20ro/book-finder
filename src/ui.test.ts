@@ -251,8 +251,21 @@ describe('ui', () => {
             addBook(makeBook({ id: 'b2', title: 'Second Book' }));
 
             const list = document.getElementById('home-book-list')!;
-            const cards = list.querySelectorAll('.book-card');
+            const cards = list.querySelectorAll<HTMLElement>('.book-card');
             expect(cards).toHaveLength(2);
+            // Verify each card has correct data-index for event delegation and reorder
+            Array.from(cards).forEach((card, i) => {
+                expect(card.dataset.index).toBe(String(i));
+            });
+            // Titles must be present in DOM for screen readers and tests
+            expect(list.textContent).toContain('First Book');
+            expect(list.textContent).toContain('Second Book');
+            // Remove buttons must exist with correct indices
+            const removeBtns = list.querySelectorAll<HTMLElement>('.btn-remove');
+            expect(removeBtns).toHaveLength(2);
+            Array.from(removeBtns).forEach((btn, i) => {
+                expect(btn.dataset.index).toBe(String(i));
+            });
         });
 
         it('renders book title, authors, ISBN', () => {
