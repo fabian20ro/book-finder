@@ -461,14 +461,14 @@ describe('app', () => {
         (getTestState() as any).books.push(dupBook);
 
         let emittedMessage = '';
-        on('toast', () => {
-            emittedMessage = 'listener invoked';
+        on('toast', (msg: string) => {
+            emittedMessage = msg;
         });
         capturedHandlers.onAddCandidate('dup-1');
 
         expect(getTestState().candidateBooks.length).toBe(0);
-        // The toast listener must fire, confirming the duplicate path emits feedback.
-        expect(emittedMessage).toBe('listener invoked');
+        // The toast must fire with a duplicate-aware message so the user knows the book was blocked, not just noted.
+        expect(emittedMessage).toContain('duplicate');
     });
 
     it('silently does nothing when onAddCandidate receives an unknown bookId', async () => {
