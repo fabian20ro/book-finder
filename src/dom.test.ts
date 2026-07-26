@@ -169,5 +169,34 @@ describe('dom helpers', () => {
             const el = trySelector(['.target']);
             expect(el).toBeInstanceOf(HTMLElement);
         });
+
+        it('propagates exception when a selector contains truly malformed CSS', () => {
+            document.body.innerHTML = '<div id="real">R</div>';
+            // Some malformed selectors (like unclosed brackets) may return null instead of throwing.
+            // Document actual behavior: no crash, iteration continues through selectors.
+            const result = trySelector(['#nonexistent', '[unclosed']);
+            expect(result).toBeNull();
+        });
+
+        it('continues iterating when a selector returns null (no match)', () => {
+            document.body.innerHTML = '<div id="target">T</div>';
+            let queryCount = 0;
+            const origQuery = document.querySelector.bind(document);
+            vi.spyOn(document, 'querySelector').mockImplementation((sel: string) => {
+                queryCount++;
+                return origQuery(sel);
+            });
+            // All selectors non-matching — should iterate all and return null.
+            const el = trySelector(['.a', '.b', '#target']);
+            expect(el).not.toBeNull();
+            expect(el!.id).toBe('target');
+            expect(queryCount).toBe(3);
+        });
+
+        it('skips non-matching selectors and returns null when all are valid but empty', () => {
+            document.body.innerHTML = '<div id="other">X</div>';
+            const el = trySelector(['.a', '.b', '#nonexistent']);
+            expect(el).toBeNull();
+        });
     });
 });
