@@ -15,8 +15,12 @@ export function $(selector: string): HTMLElement {
  */
 export function trySelector(selectors: string[]): HTMLElement | null {
     for (const sel of selectors) {
-        const el = document.querySelector(sel);
-        if (el) return el as HTMLElement;
+        try {
+            const el = document.querySelector(sel);
+            if (el) return el as HTMLElement;
+        } catch (_err) {
+            // Malformed CSS selector — skip and continue to next.
+        }
     }
     return null;
 }
