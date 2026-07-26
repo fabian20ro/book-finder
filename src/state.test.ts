@@ -394,6 +394,14 @@ describe('state', () => {
             addCandidates([makeBook({ id: 'c1' })]);
             expect(listener).not.toHaveBeenCalled();
         });
+
+        it('does nothing when called with empty array', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            addCandidates([]);
+            expect(getState().candidateBooks).toHaveLength(0);
+            expect(listener).not.toHaveBeenCalled();
+        });
     });
 
     describe('removeCandidateById', () => {
