@@ -556,6 +556,15 @@ describe('computeConfidence', () => {
         expect(withZero).toBe(without);
     });
 
+    it('ignores zero averageRating', () => {
+        // averageRating === 0 should not contribute points per the > 0 guard.
+        // Documents the observable contract to prevent regression if someone
+        // later changes the comparison from > 0 to >= 0.
+        const withZero = computeConfidence(makeBookData(), 0);
+        const without = computeConfidence(makeBookData());
+        expect(withZero).toBe(without);
+    });
+
     it('caps ratingsCount contribution at its max', () => {
         // ratingsCount > 100 should contribute only up to the max 8 points.
         const score = computeConfidence(makeBookData(), undefined, 5000);
