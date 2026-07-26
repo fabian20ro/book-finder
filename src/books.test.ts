@@ -853,6 +853,15 @@ describe('isISBN', () => {
   it('handles mixed hyphens and spaces', () => {
     expect(isISBN('978-1 234567890')).toBe(true);
   });
+
+  it('recognizes valid hyphenated ISBN-10', () => {
+    // ISBN-10 with hyphens (common real-world format) should be detected.
+    expect(isISBN('123-4567890')).toBe(true);
+  });
+
+  it('recognizes ISBN-10 with spaces between digits', () => {
+    expect(isISBN('1 2 3 4 5 6 7 8 9 0')).toBe(true);
+  });
 });
 
 describe('getConfidenceColor', () => {
