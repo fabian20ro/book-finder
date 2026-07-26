@@ -209,10 +209,17 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
     // deduped and excluding lines that are identical to the combined query (single-line case)
     const longIndividuals = [...new Set(texts.filter((t) => t.length >= SECONDARY_QUERY_MIN_LENGTH && t !== combined))];
 
-    const queries = [combined, ...longIndividuals].slice(0, MAX_QUERIES_PER_SCAN);
+    // Deduplicate queries to avoid redundant API calls against the Google Books limit.
+    const querySet = new Set<string>();
+    for (const q of [combined, ...longIndividuals]) {
+        if (!querySet.has(q)) {
+            querySet.add(q);
+        }
+    }
+    const dedupedQueries = [...querySet].slice(0, MAX_QUERIES_PER_SCAN);
 
     const allNewBooks: Book[] = [];
-    for (const query of queries) {
+    for (const query of dedupedQueries) {
         try {
             const results = await bookSearcher.search(query);
             allNewBooks.push(...results);

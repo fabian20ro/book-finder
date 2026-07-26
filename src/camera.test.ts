@@ -150,6 +150,23 @@ describe('CameraManager', () => {
             await expect(camera.start()).rejects.toThrow('Could not access camera');
         });
 
+        it('throws on generic Error rejection from getUserMedia', async () => {
+            (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(
+                new Error('Something went wrong'),
+            );
+
+            const camera = new CameraManager(video, canvas);
+            await expect(camera.start()).rejects.toThrow('Could not access camera. Ensure no other app is using it.');
+        });
+
+        it('throws on non-NotAllowedError DOMException (e.g. NotReadableError)', async () => {
+            const err = new DOMException('Device in use', 'NotReadableError');
+            (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(err);
+
+            const camera = new CameraManager(video, canvas);
+            await expect(camera.start()).rejects.toThrow('Could not access camera. Ensure no other app is using it.');
+        });
+
         it('resolves immediately when video readyState >= 2 without waiting for loadedmetadata event', async () => {
             // Override the mock's srcObject setter to synchronously set readyState=2,
             // triggering the immediate-resolution branch (line 45-46 in camera.ts).

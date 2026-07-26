@@ -348,4 +348,58 @@ describe('parsing stored books', () => {
         const titles = (result as any[]).map((b) => b.title);
         expect(titles).toEqual(['Unique First', 'Duplicate A', 'Unique Second', 'Duplicate B']);
     });
+
+    it('treats non-numeric confidence values as null → defaults to 0', () => {
+        const json = JSON.stringify([
+            { id: 'str-conf', title: 'String Confidence', confidence: "150" },
+            { id: 'bool-conf', title: 'Boolean Confidence', confidence: true },
+            { id: 'null-conf', title: 'Null Confidence', confidence: null },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        // String "150" fails typeof === 'number' → null → defaults to 0
+        expect(result[0].confidence).toBe(0);
+        // Boolean true fails typeof === 'number' → null → defaults to 0
+        expect(result[1].confidence).toBe(0);
+        // Null fails typeof === 'number' → null → defaults to 0
+        expect(result[2].confidence).toBe(0);
+    });
+
+    it('handles string and boolean numeric fields that should be rejected', () => {
+        const json = JSON.stringify([
+            { id: 'str-isbn', title: 'String ISBN', isbn: "978-1234567890" },
+            { id: 'bool-desc', title: 'Boolean Description', description: false },
+            { id: 'null-date', title: 'Null Date', publishedDate: null as any },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        // String isbn fails typeof === 'string' check on the value itself — getTrimmedString returns it as-is after trim
+        expect(typeof result[0].isbn).toBe('string');
+        // Boolean description → null (typeof !== 'string')
+        expect(result[1].description).toBe(null);
+        // Null publishedDate → null
+        expect(result[2].publishedDate).toBe(null);
+    });
+
+    it('handles authors as non-array value', () => {
+        const json = JSON.stringify([
+            { id: 'string-authors', title: 'String Authors', authors: "Single Author" },
+            { id: 'number-authors', title: 'Number Authors', authors: 42 },
+            { id: 'null-authors', title: 'Null Authors', authors: null as any },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        // String "Single Author" → Array.isArray is false → empty array fallback
+        expect(result[0].authors).toEqual([]);
+        // Number 42 → filter rejects non-strings → empty array
+        expect(result[1].authors).toEqual([]);
+        // Null authors → Array.isArray(false) → []
+        expect(result[2].authors).toEqual([]);
+    });
 });
