@@ -101,6 +101,43 @@ describe('dom helpers', () => {
         });
     });
 
+    describe('$first', () => {
+        it('returns the first matching element', () => {
+            document.body.innerHTML = '<span class="x">A</span><span class="x">B</span>';
+            const el = $first('.x');
+            expect(el).not.toBeNull();
+            expect(el!.textContent).toBe('A');
+        });
+
+        it('returns null when no match', () => {
+            document.body.innerHTML = '<div id="only">O</div>';
+            const el = $first('.nonexistent');
+            expect(el).toBeNull();
+        });
+
+        it('returns first element in document order for multiple matches', () => {
+            document.body.innerHTML = '<p class="m">second</p><p class="m">first</p>';
+            const el = $first('.m');
+            expect(el).not.toBeNull();
+            // querySelectorAll returns elements in document order; first is the first in DOM.
+            expect(el!.textContent).toBe('second');
+        });
+
+        it('returns HTMLElement type', () => {
+            document.body.innerHTML = '<div id="target">T</div>';
+            const el = $first('#target');
+            expect(el).toBeInstanceOf(HTMLElement);
+            expect(el!.id).toBe('target');
+        });
+
+        it('handles complex selectors', () => {
+            document.body.innerHTML = '<ul><li>one</li><li class="active">two</li></ul>';
+            const el = $first('li.active');
+            expect(el).not.toBeNull();
+            expect(el!.textContent).toBe('two');
+        });
+    });
+
     describe('trySelector', () => {
         it('returns the first matching selector', () => {
             document.body.innerHTML = '<div class="a">A</div><span id="b">B</span>';
