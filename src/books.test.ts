@@ -393,6 +393,27 @@ describe('BookSearcher', () => {
             expect(score).toBeGreaterThan(0);
         });
 
+        it('recovers author match when user types initials without dots (e.g., "JK Rowling" vs "J.K. Rowling")', () => {
+            // User searches for J K Rowling (no dots, spaces between initials).
+            // Book metadata has "J.K. Rowling" — the merge logic should join j+k into one token on both sides.
+            const book = {
+                id: 'b-jk-rowling',
+                title: 'A Wizard of Earthsea',
+                authors: ['Ursula K. Le Guin'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // Query "U K Le Guin" — the single letters U and K are separated by punctuation in the book but not in query.
+            const score = queryMatchRatio(book, 'Ursula K Le Guin');
+            expect(score).toBeGreaterThan(0);
+        });
+
         it('does not match when punctuation-separated letters are separated by non-punctuation', () => {
             // If letters are separated by spaces instead of punctuation, they remain separate tokens.
             const book = {
