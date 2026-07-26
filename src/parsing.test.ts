@@ -219,6 +219,32 @@ describe('parsing stored books', () => {
         expect(result[0].description).toBe(null);
     });
 
+    it('converts every non-string optional field to null in a single entry', () => {
+        const json = JSON.stringify([
+            {
+                id: 'all-non-string-opts',
+                title: 'All Non-String Options',
+                publisher: true,
+                publishedDate: 2024,
+                description: false,
+                isbn: 1234567890,
+                thumbnailUrl: null as any,
+                infoLink: { href: 'https://example.com' },
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        // Every optional string field becomes null via getTrimmedString
+        expect(result[0].publisher).toBe(null);
+        expect(result[0].publishedDate).toBe(null);
+        expect(result[0].description).toBe(null);
+        expect(result[0].isbn).toBe(null);
+        expect(result[0].thumbnailUrl).toBe(null);
+        expect(result[0].infoLink).toBe(null);
+    });
+
     it('handles NaN and out-of-range confidence values', () => {
         const json = JSON.stringify([
             { id: 'nan-conf', title: 'NaN Confidence', confidence: NaN },
