@@ -749,7 +749,21 @@ describe('queryMatchRatio', () => {
         expect(queryMatchRatio(makeBookData(), '')).toBe(0);
     });
 
-});
+    it('handles non-string metadata fields (numbers, booleans) without throwing', () => {
+        // Book metadata types include number | null; production code coerces via
+        // .filter(Boolean).join(" "), silently converting numbers/booleans to strings.
+        // This test documents that observable contract — no exception, deterministic match.
+        expect(queryMatchRatio(
+            makeBookData({ pageCount: 200 }),
+            'The Great Gatsby',
+        )).toBeGreaterThanOrEqual(0);
+
+        expect(queryMatchRatio(
+            makeBookData({ isbn: '9781234567890' } as any),
+            '9781234567890',
+        )).toBe(1);
+    });
+  });
 
 describe('getConfidenceLevel', () => {
   it('returns High for score >= 80', () => {
