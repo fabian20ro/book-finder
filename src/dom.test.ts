@@ -170,12 +170,12 @@ describe('dom helpers', () => {
             expect(el).toBeInstanceOf(HTMLElement);
         });
 
-        it('propagates exception when a selector contains truly malformed CSS', () => {
+        it('skips malformed selectors and continues to next', () => {
             document.body.innerHTML = '<div id="real">R</div>';
-            // Some malformed selectors (like unclosed brackets) may return null instead of throwing.
-            // Document actual behavior: no crash, iteration continues through selectors.
-            const result = trySelector(['#nonexistent', '[unclosed']);
-            expect(result).toBeNull();
+            // Malformed selector throws DOMException; trySelector must skip it.
+            const result = trySelector(['[unclosed', '#real']);
+            expect(result).not.toBeNull();
+            expect(result!.id).toBe('real');
         });
 
         it('continues iterating when a selector returns null (no match)', () => {
