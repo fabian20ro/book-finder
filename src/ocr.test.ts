@@ -134,6 +134,33 @@ describe('TextRecognizer', () => {
             expect(mockWorker.terminate).toHaveBeenCalled();
         });
 
+        it('invokes onSetLanguage callback after successful init', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await recognizer.init('eng', { onSetLanguage });
+
+            expect(onSetLanguage).toHaveBeenCalledWith('eng');
+        });
+
+        it('does not invoke onSetLanguage callback when init fails before worker creation', async () => {
+            vi.stubGlobal('Tesseract', undefined);
+
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.init('eng', { onSetLanguage })).rejects.toThrow(
+                'Tesseract.js failed to load from CDN',
+            );
+
+            expect(onSetLanguage).not.toHaveBeenCalled();
+        });
+
         it('resets isProcessing when resetProcessing() is called', async () => {
             const mockWorker = {
                 recognize: vi.fn(),
@@ -280,6 +307,45 @@ describe('TextRecognizer', () => {
             // currentLang and worker must revert to pre-switch values.
             expect(recognizer.getLanguage()).toBe('ron');
             expect((recognizer as any).worker).toBe(prevWorker);
+        });
+
+        it('invokes onSetLanguage callback after successful setLanguage switch', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron', { onSetLanguage });
+            onSetLanguage.mockClear();
+
+            await recognizer.setLanguage('eng');
+
+            expect(onSetLanguage).toHaveBeenCalledWith('eng');
+        });
+
+        it('does not invoke onSetLanguage callback when setLanguage rolls back', async () => {
+            const initWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(initWorker as any);
+
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron', { onSetLanguage });
+            onSetLanguage.mockClear();
+
+            // Make the next createWorker call throw — will trigger rollback.
+            vi.mocked(Tesseract.createWorker).mockRejectedValue(new Error('network error'));
+
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('network error');
+
+            expect(onSetLanguage).not.toHaveBeenCalled();
         });
     });
 
