@@ -86,6 +86,39 @@ describe('CameraManager', () => {
             });
         });
 
+        it('merges custom video constraints over defaults when provided', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start(undefined, { width: { ideal: 720 } });
+
+            expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 720 },
+                    height: { ideal: 1080 },
+                    aspectRatio: { ideal: 16 / 9 },
+                },
+                audio: false,
+            });
+        });
+
+        it('uses full custom constraints when defaults are overridden', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start(
+                undefined,
+                { facingMode: 'user' as const, width: 640, height: 480 },
+            );
+
+            expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+                video: {
+                    facingMode: 'user',
+                    width: 640,
+                    height: 480,
+                    aspectRatio: { ideal: 16 / 9 },
+                },
+                audio: false,
+            });
+        });
+
         it('sets canvas dimensions to video dimensions', async () => {
             const camera = new CameraManager(video, canvas);
             await camera.start();
