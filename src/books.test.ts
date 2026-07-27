@@ -387,6 +387,46 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('queryMatchRatio — single-letter token merging', () => {
+        it('merges consecutive single-letter initials so "J.K." matches as "jk"', () => {
+            const book = {
+                id: 'b-rowling',
+                title: 'Harry Potter',
+                authors: ['J. K. Rowling'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // Query "jk rowling" should find both merged tokens → ratio 1.0
+            const score = queryMatchRatio(book as any, 'jk rowling');
+            expect(score).toBe(1);
+        });
+
+        it('does not merge initials separated by longer non-singleton tokens', () => {
+            const book = {
+                id: 'b-mock',
+                title: 'Some Book',
+                authors: ['A. X Author Y Writer'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // "ax" merges from A.X → matches; query word "zzz" is unmatched (length >= 2 so not filtered). 1/2 = 0.5
+            const score = queryMatchRatio(book as any, 'ax zzz');
+            expect(score).toBe(0.5);
+        });
+    });
+
     describe('preloadBookId', () => {
         it('prevents book from appearing in search results', async () => {
             searcher.preloadBookId('v1');
