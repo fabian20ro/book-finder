@@ -101,6 +101,23 @@ describe('TextRecognizer', () => {
             await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized. Call init() first.');
         });
 
+        it('resolves successfully after successful init', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // verifyReadiness must resolve cleanly — it is the readiness gate before scanning.
+            await expect(recognizer.verifyReadiness()).resolves.toBeUndefined();
+
+            await recognizer.destroy();
+        });
+
         it('throws if verifyReadiness is called when busy', async () => {
             const mockWorker = {
                 recognize: vi.fn(),
