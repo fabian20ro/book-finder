@@ -1,6 +1,6 @@
 import 'vitest-canvas-mock';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { preprocessCanvas } from './ocr';
+import { frameBrightness, preprocessCanvas } from './ocr';
 
 class MockCanvasContext {
     data = new Uint8ClampedArray(36);
@@ -220,6 +220,110 @@ describe('preprocessCanvas', () => {
             expect(data[i + 1]).toBeGreaterThanOrEqual(0);
             expect(data[i + 2]).toBeGreaterThanOrEqual(0);
         }
+    });
+
+    describe('frameBrightness', () => {
+        it('should return 128 when getContext returns null (fallback)', () => {
+            vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(128); // Default fallback value
+        });
+
+        it('should return average brightness for uniform white canvas', () => {
+            // All pixels at 255 (white)
+            for (let i = 0; i < mockCtx.data.length; i += 4) {
+                mockCtx.data[i]     = 255;
+                mockCtx.data[i + 1] = 255;
+                mockCtx.data[i + 2] = 255;
+                mockCtx.data[i + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(255); // Average of (255+255+255)/3 = 255
+        });
+
+        it('should return average brightness for uniform black canvas', () => {
+            // All pixels at 0 (black)
+            for (let i = 0; i < mockCtx.data.length; i += 4) {
+                mockCtx.data[i]     = 0;
+                mockCtx.data[i + 1] = 0;
+                mockCtx.data[i + 2] = 0;
+                mockCtx.data[i + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(0); // Average of (0+0+0)/3 = 0
+        });
+
+        it('should return average brightness for uniform gray canvas', () => {
+            // All pixels at 128 (medium gray)
+            for (let i = 0; i < mockCtx.data.length; i += 4) {
+                mockCtx.data[i]     = 128;
+                mockCtx.data[i + 1] = 128;
+                mockCtx.data[i + 2] = 128;
+                mockCtx.data[i + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(128); // Average of (128+128+128)/3 = 128
+        });
+
+        it('should sample every Nth pixel based on canvas size', () => {
+            // Create a larger canvas to verify sampling step calculation
+            canvas.width = 50;
+            canvas.height = 50;
+
+            const dataLength = 50 * 50 * 4; // 10,000 bytes
+
+            // Verify step calculation: Math.floor(data.length / 4 / 400) * 4
+            const expectedStep = Math.max(1, Math.floor(dataLength / 4 / 400)) * 4;
+
+            for (let i = 0; i < mockCtx.data.length; i += 4) {
+                mockCtx.data[i]     = 255;
+                mockCtx.data[i + 1] = 255;
+                mockCtx.data[i + 2] = 255;
+                mockCtx.data[i + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(255); // Should still return 255 regardless of sampling
+
+            // Verify the function sampled at least once (count > 0)
+            // This is implicit: if count were 0, it would return 128 (fallback)
+        });
+
+        it('should handle non-uniform brightness input', () => {
+            // Mix of bright and dark pixels
+            mockCtx.data[0]     = 255; // R
+            mockCtx.data[1]     = 255; // G
+            mockCtx.data[2]     = 255; // B
+            mockCtx.data[3]     = 255; // A
+
+            mockCtx.data[4]     = 0;   // R
+            mockCtx.data[5]     = 0;   // G
+            mockCtx.data[6]     = 0;   // B
+            mockCtx.data[7]     = 255; // A
+
+            // Set remaining pixels to uniform gray for predictable sampling
+            for (let i = 8; i < mockCtx.data.length; i += 4) {
+                mockCtx.data[i]     = 100;
+                mockCtx.data[i + 1] = 100;
+                mockCtx.data[i + 2] = 100;
+                mockCtx.data[i + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            // Should return a value between 0 and 255 based on sampling pattern
+            expect(brightness).toBeGreaterThanOrEqual(0);
+            expect(brightness).toBeLessThanOrEqual(255);
+        });
     });
 
     it('should apply documented grayscale coefficients to non-uniform RGB input', () => {

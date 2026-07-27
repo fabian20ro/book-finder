@@ -387,13 +387,12 @@ describe('BookSearcher', () => {
         });
     });
 
-    describe('queryMatchRatio — consecutive single-letter merge (author initials)', () => {
-        it('merges consecutive single letters separated by punctuation into one token', () => {
-            // Query "J.K." with author "JK Rowling" should match the merged form.
+    describe('queryMatchRatio — single-letter token merging', () => {
+        it('merges consecutive single-letter initials so "J.K." matches as "jk"', () => {
             const book = {
-                id: 'b-merged',
-                title: 'Test Book',
-                authors: ['JK Rowling'],
+                id: 'b-rowling',
+                title: 'Harry Potter',
+                authors: ['J. K. Rowling'],
                 publisher: null,
                 publishedDate: null,
                 description: null,
@@ -403,18 +402,16 @@ describe('BookSearcher', () => {
                 infoLink: null,
             };
 
-            // Direct test of the merge logic: query "J.K." should produce a merged token.
-            const score = queryMatchRatio(book, 'J.K.');
-            expect(score).toBeGreaterThan(0);
+            // Query "jk rowling" should find both merged tokens → ratio 1.0
+            const score = queryMatchRatio(book as any, 'jk rowling');
+            expect(score).toBe(1);
         });
 
-        it('recovers author match when user types initials without dots (e.g., "JK Rowling" vs "J.K. Rowling")', () => {
-            // User searches for J K Rowling (no dots, spaces between initials).
-            // Book metadata has "J.K. Rowling" — the merge logic should join j+k into one token on both sides.
+        it('does not merge initials separated by longer non-singleton tokens', () => {
             const book = {
-                id: 'b-jk-rowling',
-                title: 'A Wizard of Earthsea',
-                authors: ['Ursula K. Le Guin'],
+                id: 'b-mock',
+                title: 'Some Book',
+                authors: ['A. X Author Y Writer'],
                 publisher: null,
                 publishedDate: null,
                 description: null,
@@ -424,30 +421,9 @@ describe('BookSearcher', () => {
                 infoLink: null,
             };
 
-            // Query "U K Le Guin" — the single letters U and K are separated by punctuation in the book but not in query.
-            const score = queryMatchRatio(book, 'Ursula K Le Guin');
-            expect(score).toBeGreaterThan(0);
-        });
-
-        it('does not match when punctuation-separated letters are separated by non-punctuation', () => {
-            // If letters are separated by spaces instead of punctuation, they remain separate tokens.
-            const book = {
-                id: 'b-separate',
-                title: 'Test Book',
-                authors: ['J K Rowling'],
-                publisher: null,
-                publishedDate: null,
-                description: null,
-                isbn: null,
-                pageCount: null,
-                thumbnailUrl: null,
-                infoLink: null,
-            };
-
-            // Query "J.K." should still match "J K" in the author field because after normalization,
-            // both produce tokens that can merge or align.
-            const score = queryMatchRatio(book, 'J.K.');
-            expect(score).toBeGreaterThan(0);
+            // "ax" merges from A.X → matches; query word "zzz" is unmatched (length >= 2 so not filtered). 1/2 = 0.5
+            const score = queryMatchRatio(book as any, 'ax zzz');
+            expect(score).toBe(0.5);
         });
     });
 

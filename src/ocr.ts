@@ -6,6 +6,7 @@ export interface OcrLine {
 export interface TextRecognizerOptions {
     minLineLength?: number;
     minLineConfidence?: number;
+    onSetLanguage?: (lang: string) => void;
 }
 
 const DEFAULT_MIN_LINE_LENGTH = 3;
@@ -151,6 +152,7 @@ export class TextRecognizer {
         this.options = options;
         this.worker = await (Tesseract as any).createWorker(lang);
         await (this as any).applyWhitelist(lang);
+        options.onSetLanguage?.(lang);
     }
 
     async setLanguage(lang: string): Promise<void> {
@@ -170,6 +172,8 @@ export class TextRecognizer {
             nextWorker = await (Tesseract as any).createWorker(lang);
             this.worker = nextWorker;
             await (this as any).applyWhitelist(lang);
+
+            this.options.onSetLanguage?.(lang);
 
             if (prevWorker) {
                 await prevWorker.terminate();
