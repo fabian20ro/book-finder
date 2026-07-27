@@ -585,6 +585,26 @@ describe('scanner', () => {
             expect(books.search).toHaveBeenCalledWith('abcdefghi'); // individual >= 8 chars (9)
             expect(books.search).not.toHaveBeenCalledWith('abcdefg'); // excluded (< 8)
         });
+
+        it('sends only the combined query when all lines are shorter than 8 characters', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            await searchTextBlocks(toOcrLines(['ab', 'cd', 'ef']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('ab cd ef');
+        });
+
+        it('includes all lines in combined query even when all individuals are too short', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            // All 5 individual lines < 8 chars → only combined query fires (within MAX_QUERIES_PER_SCAN)
+            await searchTextBlocks(toOcrLines(['hi', 'bye', 'ok', 'go', 'no']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(1);
+            // Combined includes all original lines joined with spaces
+            expect(books.search).toHaveBeenCalledWith('hi bye ok go no');
+        });
     });
 
     describe('dark-frame skip', () => {
