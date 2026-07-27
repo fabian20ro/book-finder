@@ -121,10 +121,25 @@ describe('BookSearcher', () => {
             expect((searcherWithNotify as any).queryCache.has('rate limited')).toBe(false);
         });
 
-        it('handles non-ok response', async () => {
+        it('notifies on non-ok response with status code', async () => {
             vi.stubGlobal('fetch', mockFetchResponse({}, 500));
-            const results = await searcher.search('server error');
+            const notify = vi.fn();
+            const searcherWithNotify = new BookSearcher(notify);
+
+            const results = await searcherWithNotify.search('server error');
+
             expect(results).toEqual([]);
+            expect(notify).toHaveBeenCalledWith("API error: 500");
+        });
+
+        it('notifies with correct status code on non-ok response', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse({}, 404));
+            const notify = vi.fn();
+            const searcherWithNotify = new BookSearcher(notify);
+
+            await searcherWithNotify.search('not found error');
+
+            expect(notify).toHaveBeenCalledWith("API error: 404");
         });
 
         it('handles fetch error', async () => {
