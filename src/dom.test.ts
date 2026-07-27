@@ -73,6 +73,23 @@ describe('dom helpers', () => {
             expect(texts).toEqual(['1', '2']);
         });
 
+        it('returns an independent Array — mutation does not propagate back to DOM or other references', () => {
+            document.body.innerHTML = '<span class="i">x</span><span class="i">y</span><span class="i">z</span>';
+            const els1 = $$('.i');
+            // Take another reference: re-query same selector.
+            const els2 = $$('.i');
+            expect(els1).not.toBe(els2); // must be a fresh array, not shared with source NodeList
+            // Mutate the returned array: splice first element.
+            const removed = els1.splice(0, 1)[0];
+            expect(removed.textContent).toBe('x');
+            expect(els1).toHaveLength(2);
+            expect(els1[0].textContent).toBe('y');
+            // Source DOM unchanged — re-query must still see all three spans.
+            const els3 = $$('.i');
+            expect(els3).toHaveLength(3);
+            expect(els3[0].textContent).toBe('x');
+        });
+
         it('returns elements in document order', () => {
             document.body.innerHTML = '<div class="d">third</div><div class="d">first</div><div class="d">second</div>';
             const els = $$('.d');
