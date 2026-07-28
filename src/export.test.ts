@@ -282,7 +282,9 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
-        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+        const called = String(notify.mock.calls[0][0]);
+        expect(called).toContain('Could not share automatically');
+        expect(called).toContain('Test Book');
     });
 
     it('does not fall back to clipboard when share throws plain Error AbortError', async () => {
@@ -301,7 +303,9 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: undefined });
 
         await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
-        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+        const called = String(notify.mock.calls[0][0]);
+        expect(called).toContain('Could not share automatically');
+        expect(called).toContain('Test Book');
     });
 
     it('notifies when share is available but clipboard throws because it is missing', async () => {
@@ -310,56 +314,40 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: shareFn });
 
         await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
-        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+        const called = String(notify.mock.calls[0][0]);
+        expect(called).toContain('Could not share automatically');
+        expect(called).toContain('Test Book');
     });
 
-    it('falls back to a browser window when clipboard throws an error', async () => {
+    it('notifies the user with the book list when clipboard throws an error', async () => {
         const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
-        const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn() } };
-        const origOpen = window.open.bind(window);
-        vi.spyOn(window, 'open').mockReturnValue(mockWin);
-
-        await shareBooks([makeBook()], notify);
-
-        expect(vi.mocked(window.open)).toHaveBeenCalledWith('', '_blank', expect.any(String));
-        expect(mockWin.document.write).toHaveBeenCalled();
-        const html = mockWin.document.write.mock.calls[0][0];
-        expect(html).toContain('My Book Collection');
-        expect(html).toContain('Author A - Test Book');
-        expect(notify).not.toHaveBeenCalled();
-    });
-
-    it('escapes HTML special characters in window fallback content', async () => {
-        const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
-        const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn() } };
-        vi.spyOn(window, 'open').mockReturnValue(mockWin);
-
-        await shareBooks([makeBook({ title: 'A <script> Book' })], notify);
-
-        const html = mockWin.document.write.mock.calls[0][0];
-        expect(html).not.toContain('<script>');
-        expect(html).toContain('&lt;script&gt;');
-    });
-
-    it('notifies when clipboard fails and window write also throws', async () => {
-        const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
-        const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn().mockImplementation(() => { throw new Error('Write failed'); }) } };
-        vi.spyOn(window, 'open').mockReturnValue(mockWin);
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
 
-        expect(vi.mocked(window.open)).toHaveBeenCalledWith('', '_blank', expect.any(String));
         expect(writeText).toHaveBeenCalled();
-        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+        const called = String(notify.mock.calls[0][0]);
+        expect(called).toContain('Could not share automatically');
+        expect(called).not.toContain('<script>');
     });
 
-    it('falls back to notification when window.open is blocked', async () => {
+    it('includes book title with HTML-like characters in notification message', async () => {
         const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
-        vi.spyOn(window, 'open').mockReturnValue(null);
+        vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
 
-        await shareBooks([makeBook()], notify);
+        await shareBooks([makeBook({ title: 'A <script> Book' })], notify);
 
-        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+        const called = String(notify.mock.calls[0][0]);
+        expect(called).toContain('Could not share automatically');
+        expect(called).toContain('<script>');
+    });
+
+    it('notifies when both share and clipboard fail', async () => {
+        vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: undefined });
+
+        await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
+        const called = String(notify.mock.calls[0][0]);
+        expect(called).toContain('Could not share automatically');
+        expect(called).toContain('Test Book');
     });
 });
