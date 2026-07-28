@@ -54,10 +54,6 @@ export async function shareBooks(books: Book[], notify: (msg: string) => void): 
     }
 }
 
-function escapeHtml(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 export function exportToCsv(books: Book[]): void {
     if (books.length === 0) return;
 
