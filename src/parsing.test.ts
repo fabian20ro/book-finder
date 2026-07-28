@@ -278,6 +278,25 @@ describe('parsing stored books', () => {
         expect(result[0].id).toBe('valid-one');
     });
 
+    it('preserves insertion order across mixed primitives and valid objects in flatMap', () => {
+        const json = JSON.stringify([
+            // Primitives scattered among valid entries — all filtered out by normalizeStoredBook,
+            // but the ordering of surviving books must match their original positions.
+            42,                   // rejected (number)
+            { id: 'first', title: 'First' },       // kept at index 0
+            null,                 // rejected (null)
+            { id: 'second', title: 'Second' },      // kept at index 1 in original → index 1 here
+            'not-an-object',     // rejected (string primitive)
+            true,                // rejected (boolean)
+            { id: 'third', title: 'Third' },         // kept at index 2 in original → index 2 here
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        expect((result as any[]).map((b) => b.id)).toEqual(['first', 'second', 'third']);
+    });
+
     it('trims whitespace and rejects non-string publishedDate values', () => {
         const json = JSON.stringify([
             { id: 'date-trimmed', title: 'Trimmed Date', publishedDate: '  2023-01-15  ' },
