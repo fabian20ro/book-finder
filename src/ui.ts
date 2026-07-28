@@ -311,6 +311,16 @@ export function initUI(handlers: UIHandlers): void {
         }
     });
 
+    // Collapse expanded panel on Escape (keyboard accessibility)
+    languageSelector.addEventListener('keydown', (e: Event) => {
+        const ke = e as KeyboardEvent;
+        if (ke.key === 'Escape' && languageExpanded) {
+            ke.preventDefault();
+            languageExpanded = false;
+            renderLanguageSelector();
+        }
+    });
+
     // Subscribe to state events
     on('change', renderUI);
     on('toast', showToast);
