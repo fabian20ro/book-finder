@@ -425,6 +425,30 @@ describe('BookSearcher', () => {
             const score = queryMatchRatio(book as any, 'ax zzz');
             expect(score).toBe(0.5);
         });
+
+        it('only merges up to two consecutive single-letter initials — third+ are pushed and filtered out', () => {
+            // Three consecutive initials "A. B. C." → only first two merge into "ab"; the third "c" is pushed then filtered because length < 2.
+            const book = {
+                id: 'b-triple',
+                title: 'Triple Initials Book',
+                authors: ['A. B. C.'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // query "ab cd" — only first pair merges to "ab"; "cd" does not merge (starts with "c" pushed). 1/2 = 0.5
+            const score = queryMatchRatio(book as any, 'ab cd');
+            expect(score).toBe(0.5);
+
+            // query "abc" — single merged token "ab", unmatched third letter lost. 0/1 = 0.
+            const scoreAll = queryMatchRatio(book as any, 'abc');
+            expect(scoreAll).toBe(0);
+        });
     });
 
     describe('preloadBookId', () => {
