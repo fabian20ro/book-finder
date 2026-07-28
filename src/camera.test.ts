@@ -86,6 +86,39 @@ describe('CameraManager', () => {
             });
         });
 
+        it('merges custom video constraints over defaults when provided', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start(undefined, { width: { ideal: 720 } });
+
+            expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 720 },
+                    height: { ideal: 1080 },
+                    aspectRatio: { ideal: 16 / 9 },
+                },
+                audio: false,
+            });
+        });
+
+        it('uses full custom constraints when defaults are overridden', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start(
+                undefined,
+                { facingMode: 'user' as const, width: 640, height: 480 },
+            );
+
+            expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+                video: {
+                    facingMode: 'user',
+                    width: 640,
+                    height: 480,
+                    aspectRatio: { ideal: 16 / 9 },
+                },
+                audio: false,
+            });
+        });
+
         it('sets canvas dimensions to video dimensions', async () => {
             const camera = new CameraManager(video, canvas);
             await camera.start();
@@ -310,6 +343,57 @@ describe('CameraManager', () => {
         });
     });
 
+    describe('withMetadataTimeout (via start)', () => {
+        it('resolves when the inner promise settles before timeout', async () => {
+            // Override mock so srcObject setter resolves synchronously instead of via microtask.
+            let srcObjVal: any = null;
+            Object.defineProperty(video, 'srcObject', {
+                get() { return srcObjVal; },
+                set(val: any) {
+                    srcObjVal = val;
+                    Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true });
+                    Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
+                    // Resolve immediately — the timeout wrapper must resolve without waiting.
+                    Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
+                },
+                configurable: true,
+            });
+
+            const camera = new CameraManager(video, canvas);
+            await expect(camera.start()).resolves.toBeUndefined();
+        });
+
+        it('rejects after timeout when the inner promise never settles', async () => {
+            // Block the mock's srcObject setter from firing its microtask.
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {},
+                configurable: true,
+            });
+            // Override addEventListener so the loadedmetadata listener is dropped on the floor.
+            video.addEventListener = (() => {}) as typeof video.addEventListener;
+
+            const camera = new CameraManager(video, canvas);
+            vi.useFakeTimers();
+
+            const startPromise = camera.start().catch((err: unknown) => err);
+
+            try {
+                // Advance timers past 5000ms to trigger the timeout rejection synchronously.
+                await vi.advanceTimersByTimeAsync(6000);
+            } finally {
+                vi.useRealTimers();
+            }
+
+            const result = await startPromise;
+
+            // The withMetadataTimeout wrapper must reject with its timeout error message,
+            // proving that the 5-second hang-prevention contract is enforced.
+            expect(result).toBeInstanceOf(Error);
+            expect((result as Error).message).toContain('Camera metadata not ready within');
+        });
+    });
+
     describe('verifyReadiness', () => {
         it('succeeds when stream is active and video is ready', async () => {
             const camera = new CameraManager(video, canvas);
@@ -383,37 +467,6 @@ describe('CameraManager', () => {
             } finally {
                 vi.useRealTimers();
             }
-        });
-
-        it('rejects start() with timeout error when metadata never arrives', async () => {
-            const camera = new CameraManager(video, canvas);
-
-            // Block the mock's srcObject setter from firing its microtask.
-            Object.defineProperty(video, 'srcObject', {
-                get() { return null; },
-                set(_val: any) {},
-                configurable: true,
-            });
-            // Override addEventListener so the loadedmetadata listener is dropped on the floor.
-            video.addEventListener = (() => {}) as typeof video.addEventListener;
-
-            vi.useFakeTimers();
-
-            const startPromise = camera.start().catch((err: unknown) => err);
-
-            try {
-                // Advance timers past 5000ms to trigger the timeout rejection synchronously.
-                await vi.advanceTimersByTimeAsync(6000);
-            } finally {
-                vi.useRealTimers();
-            }
-
-            const result = await startPromise;
-
-            // The start() promise must reject with the metadata timeout error message,
-            // proving that the 5-second hang-prevention contract is enforced.
-            expect(result).toBeInstanceOf(Error);
-            expect((result as Error).message).toContain('Camera metadata not ready within');
         });
     });
 });

@@ -12,14 +12,17 @@ export class CameraManager {
         this.ctx = getContext2D(canvasElement);
     }
 
-    async start(onDisconnect?: () => void): Promise<void> {
+    async start(onDisconnect?: () => void, videoConstraints?: MediaTrackConstraints): Promise<void> {
         const constraints: MediaStreamConstraints = {
-            video: {
-                facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                aspectRatio: { ideal: 16 / 9 },
-            },
+            video: Object.assign(
+                {
+                    facingMode: 'environment' as const,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    aspectRatio: { ideal: 16 / 9 },
+                },
+                videoConstraints ?? {},
+            ),
             audio: false,
         };
 
