@@ -424,6 +424,16 @@ describe('state', () => {
             expect(getState().candidateBooks).toHaveLength(0);
         });
 
+        it('re-adds a book as candidate after clearBooks empties the books list', () => {
+            addBook(makeBook({ id: 'b2', title: 'Original Title' }));
+            clearBooks();
+            expect(getState().books).toEqual([]);
+            addCandidates([makeBook({ id: 'b2', title: 'Re-added' })]);
+            const [candidate] = getState().candidateBooks;
+            expect(candidate.id).toBe('b2');
+            expect(candidate.title).toBe('Re-added');
+        });
+
         it('trims metadata fields during addCandidates', () => {
             addCandidates([makeBook({
                 id: 'c-trim',
