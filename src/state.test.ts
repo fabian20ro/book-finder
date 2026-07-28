@@ -349,6 +349,63 @@ describe('state', () => {
             expect(book.isbn).toBeNull();
         });
 
+        it('normalizes whitespace-only book id to empty string during addBook', () => {
+            addBook(makeBook({ id: '   ', title: 'Whitespace Id' }));
+            const [book] = getState().books;
+            expect(book.id).toBe('');
+            expect(book.title).toBe('Whitespace Id');
+        });
+
+        it('rejects duplicate when both books have whitespace-only ids', () => {
+            addBook(makeBook({ id: '   ', title: 'First' }));
+            const result = addBook(makeBook({ id: '  \t  ', title: 'Second' }));
+            expect(result).toBe(false);
+            expect(getState().books).toHaveLength(1);
+        });
+
+        it('does not reset scanCount or lastDetectedText when clearing books', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ scanCount: 5, lastDetectedText: 'previous ocr result' });
+            clearBooks();
+            const s = getState();
+            expect(s.books).toEqual([]);
+            expect(s.scanCount).toBe(5);
+            expect(s.lastDetectedText).toBe('previous ocr result');
+        });
+
+        it('does not reset isScanning or autoScan when clearing books', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ isScanning: true, autoScan: true });
+            clearBooks();
+            const s = getState();
+            expect(s.isScanning).toBe(true);
+            expect(s.autoScan).toBe(true);
+        });
+
+        it('does not reset ocrReady or ocrLanguage when clearing books', () => {
+            update({ ocrReady: true, ocrLanguage: 'eng' });
+            clearBooks();
+            const s = getState();
+            expect(s.ocrReady).toBe(true);
+            expect(s.ocrLanguage).toBe('eng');
+        });
+
+        it('detects change when updating a nullable field from non-null to empty string', () => {
+            update({ error: 'a problem' }); // no listener yet
+            const listener = vi.fn();
+            on('change', listener);
+            update({ error: '' });
+            expect(listener).toHaveBeenCalledTimes(1);
+            expect(getState().error).toBe('');
+        });
+
+        it('does not detect change when updating a nullable field from null to null', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            update({ error: null } as any);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
         it('converts whitespace-only thumbnailUrl to null during addBook', () => {
             addBook(makeBook({ thumbnailUrl: '   ' }));
             const [book] = getState().books;
