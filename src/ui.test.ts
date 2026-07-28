@@ -731,6 +731,32 @@ describe('ui', () => {
             expect(loading).not.toBeNull();
         });
 
+        it('collapses expanded panel on Escape keydown', () => {
+            // First click "More" to expand the panel
+            const moreBtn = document.querySelector('.lang-more') as HTMLElement;
+            expect(moreBtn).not.toBeNull();
+            moreBtn.click();
+            const remainingGrid = document.querySelector('.lang-grid-expanded');
+            expect(remainingGrid).not.toBeNull();
+
+            // Now dispatch Escape on languageSelector — should collapse
+            Object.defineProperty(document, 'activeElement', { value: (moreBtn as HTMLElement), configurable: true });
+            const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+            document.getElementById('language-selector')!.dispatchEvent(escapeEvent);
+
+            expect(document.querySelector('.lang-grid-expanded')).toBeNull();
+        });
+
+        it('does not collapse when panel is already closed and Escape fires', () => {
+            update({ view: 'home' });
+            Object.defineProperty(document, 'activeElement', { value: document.body, configurable: true });
+            const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+            const selector = document.getElementById('language-selector')!;
+
+            // Should not throw or change state
+            expect(() => selector.dispatchEvent(escapeEvent)).not.toThrow();
+        });
+
         it('sets aria-label on each language button', () => {
             update({ view: 'home', ocrLanguage: 'ron' });
             const buttons = Array.from(document.querySelectorAll<HTMLElement>('.lang-btn:not(.lang-more)'));

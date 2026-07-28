@@ -324,6 +324,35 @@ describe('preprocessCanvas', () => {
             expect(brightness).toBeGreaterThanOrEqual(0);
             expect(brightness).toBeLessThanOrEqual(255);
         });
+
+        it('should compute exact average luminance for known mixed-brightness input', () => {
+            // Sets a deterministic 3x3 canvas: one white pixel, one black pixel, seven gray pixels.
+            // Since data.length=36 and step=Math.max(1,floor(36/4/400))*4 = 4 bytes (every pixel sampled),
+            // the function averages luminance ((R+G+B)/3) across all 9 samples.
+            // White pixel: (255+255+255)/3=255; Black pixel: (0+0+0)/3=0; Gray pixels: 100 each ×7.
+            // Expected average = (255 + 0 + 7*100) / 9 = 955/9 ≈ 106.11.
+            mockCtx.data[0]     = 255;  // pixel 0: R=white
+            mockCtx.data[1]     = 255;
+            mockCtx.data[2]     = 255;
+            mockCtx.data[3]     = 255;
+
+            mockCtx.data[4]     = 0;    // pixel 1: R=black
+            mockCtx.data[5]     = 0;
+            mockCtx.data[6]     = 0;
+            mockCtx.data[7]     = 255;
+
+            for (let p = 2; p < 9; p++) {
+                const base = p * 4;
+                mockCtx.data[base]     = 100; // R=gray
+                mockCtx.data[base + 1] = 100; // G=gray
+                mockCtx.data[base + 2] = 100; // B=gray
+                mockCtx.data[base + 3] = 255; // alpha
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBeCloseTo(955 / 9, 1); // ~106.11 ±0.1
+        });
     });
 
     it('should apply documented grayscale coefficients to non-uniform RGB input', () => {

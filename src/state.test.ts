@@ -361,6 +361,35 @@ describe('state', () => {
             expect(book.isbn).toBeNull();
         });
 
+        it('converts empty-string optional fields to null during addBook', () => {
+            addBook(makeBook({
+                isbn: '',
+                publisher: '',
+                publishedDate: '',
+                description: '',
+            }));
+            const [book] = getState().books;
+            expect(book.isbn).toBeNull();
+            expect(book.publisher).toBeNull();
+            expect(book.publishedDate).toBeNull();
+            expect(book.description).toBeNull();
+        });
+
+        it('converts empty-string optional fields to null during addCandidates', () => {
+            addCandidates([makeBook({
+                id: 'c-empty',
+                isbn: '',
+                publisher: '',
+                publishedDate: '',
+                description: '',
+            })]);
+            const [book] = getState().candidateBooks;
+            expect(book.isbn).toBeNull();
+            expect(book.publisher).toBeNull();
+            expect(book.publishedDate).toBeNull();
+            expect(book.description).toBeNull();
+        });
+
         it('normalizes whitespace-only book id to empty string during addBook', () => {
             addBook(makeBook({ id: '   ', title: 'Whitespace Id' }));
             const [book] = getState().books;
@@ -571,6 +600,47 @@ describe('state', () => {
             update({ scanCount: 1 });
             expect(a).toHaveBeenCalled();
             expect(b).toHaveBeenCalled();
+        });
+
+        it('listeners for one event type are not called when another type is emitted', () => {
+            const changeListener = vi.fn();
+            const toastListener = vi.fn();
+            on('change', changeListener);
+            on('toast', toastListener);
+            emit('toast', 'hello');
+            expect(changeListener).not.toHaveBeenCalled();
+            expect(toastListener).toHaveBeenCalledWith('hello');
+        });
+
+        it('emit with void event does not pass arguments to listeners', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            emit('change');
+            // Listener receives no arguments (void type)
+            expect(listener).toHaveBeenCalledTimes(1);
+            expect(listener.mock.calls[0]).toHaveLength(0);
+        });
+
+        it('unsubscribe only removes the specific listener, not others for same event', () => {
+            const listenerA = vi.fn();
+            const listenerB = vi.fn();
+            const unsubA = on('toast', listenerA);
+            on('toast', listenerB);
+
+            emit('toast', 'hello');
+            expect(listenerA).toHaveBeenCalledTimes(1);
+            expect(listenerB).toHaveBeenCalledTimes(1);
+
+            // Reset mocks to verify clean state
+            listenerA.mockClear();
+            listenerB.mockClear();
+
+            unsubA();
+
+            // After unsubscribe, only B should receive further events
+            emit('toast', 'world');
+            expect(listenerA).not.toHaveBeenCalled();
+            expect(listenerB).toHaveBeenCalledWith('world');
         });
     });
 
