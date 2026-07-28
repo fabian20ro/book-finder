@@ -361,6 +361,35 @@ describe('state', () => {
             expect(book.isbn).toBeNull();
         });
 
+        it('converts empty-string optional fields to null during addBook', () => {
+            addBook(makeBook({
+                isbn: '',
+                publisher: '',
+                publishedDate: '',
+                description: '',
+            }));
+            const [book] = getState().books;
+            expect(book.isbn).toBeNull();
+            expect(book.publisher).toBeNull();
+            expect(book.publishedDate).toBeNull();
+            expect(book.description).toBeNull();
+        });
+
+        it('converts empty-string optional fields to null during addCandidates', () => {
+            addCandidates([makeBook({
+                id: 'c-empty',
+                isbn: '',
+                publisher: '',
+                publishedDate: '',
+                description: '',
+            })]);
+            const [book] = getState().candidateBooks;
+            expect(book.isbn).toBeNull();
+            expect(book.publisher).toBeNull();
+            expect(book.publishedDate).toBeNull();
+            expect(book.description).toBeNull();
+        });
+
         it('normalizes whitespace-only book id to empty string during addBook', () => {
             addBook(makeBook({ id: '   ', title: 'Whitespace Id' }));
             const [book] = getState().books;
