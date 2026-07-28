@@ -364,6 +364,48 @@ describe('TextRecognizer', () => {
 
             expect(onSetLanguage).not.toHaveBeenCalled();
         });
+
+        it('terminates the previous worker after a successful language switch', async () => {
+            const initWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn().mockResolvedValue(undefined),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            const newWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn().mockResolvedValue(undefined),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            let callCount = 0;
+            vi.mocked(Tesseract.createWorker).mockImplementation(() => {
+                callCount++;
+                return Promise.resolve(callCount === 1 ? initWorker : newWorker);
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+
+            // Initial createWorker was called once during init.
+            expect(Tesseract.createWorker).toHaveBeenCalledTimes(1);
+
+            await recognizer.setLanguage('eng');
+
+            // A second worker should have been created for the switch.
+            expect(Tesseract.createWorker).toHaveBeenCalledTimes(2);
+
+            // The old (init) worker must be terminated — no leaks when switching languages.
+            expect(initWorker.terminate).toHaveBeenCalled();
+
+            // State reflects the new language.
+            expect(recognizer.getLanguage()).toBe('eng');
+        });
+
+        it('throws for an invalid language before init without crashing', async () => {
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.setLanguage('invalid-lang')).rejects.toThrow(
+                'Unsupported language: invalid-lang',
+            );
+        });
     });
 
     describe('setWhitelist', () => {

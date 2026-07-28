@@ -343,10 +343,79 @@ describe('state', () => {
             expect(book.authors).toEqual(['Author One', 'Another Two']);
         });
 
+        it('trims leading and trailing whitespace from title during addBook', () => {
+            addBook(makeBook({ id: 'trim-title', title: '   Book Title With Padding  ' }));
+            const [book] = getState().books;
+            expect(book.title).toBe('Book Title With Padding');
+        });
+
+        it('trims leading and trailing whitespace from title during addCandidates', () => {
+            addCandidates([makeBook({ id: 'trim-cand-title', title: '   Candidate Title  ' })]);
+            const [book] = getState().candidateBooks;
+            expect(book.title).toBe('Candidate Title');
+        });
+
         it('converts whitespace-only isbn to null during addBook', () => {
             addBook(makeBook({ isbn: '   ' }));
             const [book] = getState().books;
             expect(book.isbn).toBeNull();
+        });
+
+        it('normalizes whitespace-only book id to empty string during addBook', () => {
+            addBook(makeBook({ id: '   ', title: 'Whitespace Id' }));
+            const [book] = getState().books;
+            expect(book.id).toBe('');
+            expect(book.title).toBe('Whitespace Id');
+        });
+
+        it('rejects duplicate when both books have whitespace-only ids', () => {
+            addBook(makeBook({ id: '   ', title: 'First' }));
+            const result = addBook(makeBook({ id: '  \t  ', title: 'Second' }));
+            expect(result).toBe(false);
+            expect(getState().books).toHaveLength(1);
+        });
+
+        it('does not reset scanCount or lastDetectedText when clearing books', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ scanCount: 5, lastDetectedText: 'previous ocr result' });
+            clearBooks();
+            const s = getState();
+            expect(s.books).toEqual([]);
+            expect(s.scanCount).toBe(5);
+            expect(s.lastDetectedText).toBe('previous ocr result');
+        });
+
+        it('does not reset isScanning or autoScan when clearing books', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ isScanning: true, autoScan: true });
+            clearBooks();
+            const s = getState();
+            expect(s.isScanning).toBe(true);
+            expect(s.autoScan).toBe(true);
+        });
+
+        it('does not reset ocrReady or ocrLanguage when clearing books', () => {
+            update({ ocrReady: true, ocrLanguage: 'eng' });
+            clearBooks();
+            const s = getState();
+            expect(s.ocrReady).toBe(true);
+            expect(s.ocrLanguage).toBe('eng');
+        });
+
+        it('detects change when updating a nullable field from non-null to empty string', () => {
+            update({ error: 'a problem' }); // no listener yet
+            const listener = vi.fn();
+            on('change', listener);
+            update({ error: '' });
+            expect(listener).toHaveBeenCalledTimes(1);
+            expect(getState().error).toBe('');
+        });
+
+        it('does not detect change when updating a nullable field from null to null', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            update({ error: null } as any);
+            expect(listener).not.toHaveBeenCalled();
         });
 
         it('converts whitespace-only thumbnailUrl to null during addBook', () => {
@@ -365,6 +434,16 @@ describe('state', () => {
             addBook(makeBook({ id: 'b1' }));
             addCandidates([makeBook({ id: 'b1' })]);
             expect(getState().candidateBooks).toHaveLength(0);
+        });
+
+        it('re-adds a book as candidate after clearBooks empties the books list', () => {
+            addBook(makeBook({ id: 'b2', title: 'Original Title' }));
+            clearBooks();
+            expect(getState().books).toEqual([]);
+            addCandidates([makeBook({ id: 'b2', title: 'Re-added' })]);
+            const [candidate] = getState().candidateBooks;
+            expect(candidate.id).toBe('b2');
+            expect(candidate.title).toBe('Re-added');
         });
 
         it('trims metadata fields during addCandidates', () => {
