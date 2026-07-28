@@ -343,6 +343,18 @@ describe('state', () => {
             expect(book.authors).toEqual(['Author One', 'Another Two']);
         });
 
+        it('trims leading and trailing whitespace from title during addBook', () => {
+            addBook(makeBook({ id: 'trim-title', title: '   Book Title With Padding  ' }));
+            const [book] = getState().books;
+            expect(book.title).toBe('Book Title With Padding');
+        });
+
+        it('trims leading and trailing whitespace from title during addCandidates', () => {
+            addCandidates([makeBook({ id: 'trim-cand-title', title: '   Candidate Title  ' })]);
+            const [book] = getState().candidateBooks;
+            expect(book.title).toBe('Candidate Title');
+        });
+
         it('converts whitespace-only isbn to null during addBook', () => {
             addBook(makeBook({ isbn: '   ' }));
             const [book] = getState().books;
