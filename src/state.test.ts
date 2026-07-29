@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, update, addBook, removeBook, moveBook, clearBooks, setView, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
+import { getState, update, addBook, removeBook, moveBook, clearBooks, setView, addCandidates, removeCandidateById, clearAll, clearCandidates, toast, on, emit } from './state';
 
 describe('update (edge cases)', () => {
     it('does not emit change when updating to the same value', () => {
@@ -563,6 +563,83 @@ describe('state', () => {
             on('change', listener);
             clearCandidates();
             expect(listener).toHaveBeenCalled();
+        });
+    });
+
+    describe('clearAll', () => {
+        it('removes all books, candidates, and resets filter in one call', () => {
+            addBook(makeBook({ id: 'a' }));
+            addCandidates([makeBook({ id: 'c1' })]);
+            update({ candidateFilter: 'search term' });
+
+            clearAll();
+
+            const s = getState();
+            expect(s.books).toEqual([]);
+            expect(s.candidateBooks).toEqual([]);
+            expect(s.candidateFilter).toBe('');
+        });
+
+        it('emits change event exactly once', () => {
+            addBook(makeBook({ id: 'a' }));
+            addCandidates([makeBook({ id: 'c1' })]);
+            const listener = vi.fn();
+            on('change', listener);
+
+            clearAll();
+
+            expect(listener).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not reset isScanning or autoScan (preserves scanning state)', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ isScanning: true, autoScan: true });
+
+            clearAll();
+
+            const s = getState();
+            expect(s.isScanning).toBe(true);
+            expect(s.autoScan).toBe(true);
+        });
+
+        it('does not reset scanCount or lastDetectedText', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ scanCount: 5, lastDetectedText: 'previous ocr result' });
+
+            clearAll();
+
+            const s = getState();
+            expect(s.scanCount).toBe(5);
+            expect(s.lastDetectedText).toBe('previous ocr result');
+        });
+
+        it('does not reset ocrReady or ocrLanguage', () => {
+            update({ ocrReady: true, ocrLanguage: 'eng' });
+
+            clearAll();
+
+            const s = getState();
+            expect(s.ocrReady).toBe(true);
+            expect(s.ocrLanguage).toBe('eng');
+        });
+
+        it('does not reset view mode', () => {
+            setView('scan');
+
+            clearAll();
+
+            const s = getState();
+            expect(s.view).toBe('scan');
+        });
+
+        it('is idempotent — safe to call when already empty', () => {
+            const listener = vi.fn();
+            on('change', listener);
+
+            clearAll();
+
+            // Should still emit even though nothing changed (consistent with clearBooks/clearCandidates)
+            expect(listener).toHaveBeenCalledTimes(1);
         });
     });
 

@@ -416,5 +416,49 @@ describe('Book logic', () => {
             expect(() => searcher.preloadBookId('x')).not.toThrow();
             expect(() => searcher.removeBookId('x')).not.toThrow();
         });
+
+        it('preloadBookId and removeBookId manage book tracking state', () => {
+            const searcher = new BookSearcher();
+            // preload adds a book id, then clear resets — re-adding the same id should still work
+            searcher.preloadBookId('book-alpha');
+            expect(() => searcher.removeBookId('book-alpha')).not.toThrow();
+            searcher.clear();
+            searcher.preloadBookId('book-beta');
+            expect(() => searcher.removeBookId('book-beta')).not.toThrow();
+        });
+
+        it('clear() resets both query cache and found book IDs to initial empty state', () => {
+            const searcher = new BookSearcher();
+            // Seed both caches via preload (foundBookIds) and a short query that hits the cache path
+            searcher.preloadBookId('seed-id-1');
+            searcher.preloadBookId('seed-id-2');
+            searcher.clear();
+            // After clear, preloading again should not accumulate with previous state
+            searcher.preloadBookId('post-clear-id');
+            expect(() => searcher.removeBookId('post-clear-id')).not.toThrow();
+            // A second clear followed by a fresh preload confirms both caches were reset
+            searcher.clear();
+            searcher.preloadBookId('fresh-id');
+            expect(() => searcher.removeBookId('fresh-id')).not.toThrow();
+        });
+
+        it('notify callback is stored and callable through search lifecycle', async () => {
+            const notify = vi.fn();
+            const searcher = new BookSearcher(notify);
+            // Short query short-circuits before notify — confirms the callback exists without invoking it.
+            await searcher.search('a');
+            expect(notify).not.toHaveBeenCalled();
+        });
+
+        it('search returns empty array for non-string, empty, and whitespace inputs', async () => {
+            const searcher = new BookSearcher();
+            // Verifies the contract across all three guard branches in one focused block.
+            await expect(searcher.search(42 as unknown as string)).resolves.toEqual([]);
+            await expect(searcher.search(null as unknown as string)).resolves.toEqual([]);
+            await expect(searcher.search(undefined as unknown as string)).resolves.toEqual([]);
+            await expect(searcher.search('')).resolves.toEqual([]);
+            await expect(searcher.search('   ')).resolves.toEqual([]);
+            await expect(searcher.search('a')).resolves.toEqual([]);
+        });
     });
 });

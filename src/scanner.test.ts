@@ -326,6 +326,20 @@ describe('scanner', () => {
             expect(ocr.resetProcessing).toHaveBeenCalled();
             expect(consoleError).toHaveBeenCalledWith('Scan once error:', expect.any(Error));
         });
+
+        it('handles non-timeout OCR errors with generic toast and no reset', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+            ocr.recognize.mockRejectedValue(new Error('OCR engine crashed'));
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.toast).toHaveBeenCalledWith('Scan once error: OCR engine crashed');
+            expect(ocr.resetProcessing).not.toHaveBeenCalled();
+            expect(consoleError).toHaveBeenCalledWith('Scan once error:', expect.any(Error));
+        });
     });
 
     describe('resumeAutoScan', () => {

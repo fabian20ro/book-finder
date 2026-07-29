@@ -173,6 +173,13 @@ export function removeCandidateById(bookId: string): void {
     }
 }
 
+export function clearAll(): void {
+    state.books.length = 0;
+    state.candidateBooks.length = 0;
+    state.candidateFilter = '';
+    emit('change');
+}
+
 export function clearCandidates(): void {
     state.candidateBooks.length = 0;
     state.candidateFilter = '';
