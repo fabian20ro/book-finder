@@ -266,6 +266,78 @@ describe('state', () => {
         });
     });
 
+    describe('moveBook', () => {
+        it('reorders books between valid indices', () => {
+            addBook(makeBook({ id: 'a', title: 'First' }));
+            addBook(makeBook({ id: 'b', title: 'Second' }));
+            addBook(makeBook({ id: 'c', title: 'Third' }));
+
+            moveBook(0, 2);
+            const books = getState().books;
+            expect(books[0].id).toBe('b');
+            expect(books[1].id).toBe('c');
+            expect(books[2].id).toBe('a');
+        });
+
+        it('does not emit change when moving same index to itself', () => {
+            addBook(makeBook());
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('returns without emitting for negative fromIndex', () => {
+            addBook(makeBook({ id: 'a' }));
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(-1, 0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('returns without emitting for fromIndex out of bounds', () => {
+            addBook(makeBook());
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(5, 0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('returns without emitting for toIndex out of bounds', () => {
+            addBook(makeBook({ id: 'a' }));
+            addBook(makeBook({ id: 'b' }));
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 5);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('emits change event for valid reorder', () => {
+            addBook(makeBook({ id: 'a' }));
+            addBook(makeBook({ id: 'b' }));
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 1);
+            expect(listener).toHaveBeenCalled();
+        });
+
+        it('preserves book count after reorder', () => {
+            addBook(makeBook());
+            addBook(makeBook({ id: 'b' }));
+            addBook(makeBook({ id: 'c' }));
+            moveBook(1, 0);
+            expect(getState().books).toHaveLength(3);
+        });
+
+        it('wraps around when moving to end', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            moveBook(0, 1);
+            expect(getState().books[0].id).toBe('b');
+            expect(getState().books[1].id).toBe('a');
+        });
+    });
+
     describe('clearBooks', () => {
         it('removes all books', () => {
             addBook(makeBook({ id: 'a' }));
