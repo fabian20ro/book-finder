@@ -352,8 +352,10 @@ function addBookAndSave(book: Book): boolean {
     const added = addBook(book);
     if (added) {
         toast(`Found: ${book.title}`);
+        navigator.vibrate?.(50);
     } else {
         toast(`${book.title} is already a duplicate — skipped`);
+        navigator.vibrate?.(20);
     }
     return added;
 }
