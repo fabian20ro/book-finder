@@ -549,6 +549,46 @@ describe('BookSearcher', () => {
             const score = computeConfidence(book as any, 5, 100, 'cap book');
             expect(score).toBe(100);
         });
+
+        it('yields Low confidence for a barely-filled book (title+authors only)', () => {
+            const book = {
+                id: 'b-low',
+                title: 'Test Book',
+                authors: ['Author'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            const score = computeConfidence(book as any);
+            // title(10) + authors(10) = 20; below Medium threshold (40)
+            expect(score).toBeLessThan(40);
+            expect(getConfidenceLevel(score)).toBe('Low');
+        });
+
+        it('yields Medium confidence when query match pushes score past 40', () => {
+            const book = {
+                id: 'b-med',
+                title: 'Test Book',
+                authors: ['Author'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // title(10) + authors(10) = 20; query "Test Book Author" matches all → ratio=1 → +30 = 50
+            const score = computeConfidence(book as any, undefined, undefined, 'Test Book Author');
+            expect(score).toBeGreaterThanOrEqual(40);
+            expect(getConfidenceLevel(score)).toBe('Medium');
+        });
     });
 
     describe('preloadBookId', () => {
