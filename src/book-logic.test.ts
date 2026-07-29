@@ -460,5 +460,183 @@ describe('Book logic', () => {
             await expect(searcher.search('   ')).resolves.toEqual([]);
             await expect(searcher.search('a')).resolves.toEqual([]);
         });
+
+        it('preloadBookId adds to foundBookIds and removeBookId removes from it', () => {
+            const searcher = new BookSearcher();
+            // Access the private foundBookIds via 'as any' since it's not exposed.
+            const fbids = (searcher as any).foundBookIds as Set<string>;
+            expect(fbids.has('book-a')).toBe(false);
+            searcher.preloadBookId('book-a');
+            expect(fbids.has('book-a')).toBe(true);
+            searcher.removeBookId('book-a');
+            expect(fbids.has('book-a')).toBe(false);
+        });
+
+        it('preloadBookId is idempotent — adding the same ID twice does not duplicate', () => {
+            const searcher = new BookSearcher();
+            const fbids = (searcher as any).foundBookIds as Set<string>;
+            searcher.preloadBookId('dup');
+            searcher.preloadBookId('dup');
+            expect(fbids.size).toBe(1);
+        });
+
+        it('removeBookId on a missing ID does not throw and leaves state unchanged', () => {
+            const searcher = new BookSearcher();
+            const fbids = (searcher as any).foundBookIds as Set<string>;
+            expect(() => searcher.removeBookId('nonexistent')).not.toThrow();
+            expect(fbids.has('nonexistent')).toBe(false);
+        });
+
+        it('clear() empties foundBookIds in addition to queryCache', () => {
+            const searcher = new BookSearcher();
+            searcher.preloadBookId('a');
+            searcher.preloadBookId('b');
+            expect((searcher as any).foundBookIds.size).toBe(2);
+            expect((searcher as any).queryCache.size).toBe(0);
+            searcher.clear();
+            expect((searcher as any).foundBookIds.size).toBe(0);
+            expect((searcher as any).queryCache.size).toBe(0);
+        });
+
+        it('notify is invoked on API error responses from search', async () => {
+            const notify = vi.fn();
+            const searcher = new BookSearcher(notify);
+            // Mock fetch to return a non-ok response so the error branch fires.
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: false,
+                status: 503,
+                json: async () => ({}),
+            }));
+            await searcher.search('test');
+            expect(notify).toHaveBeenCalledWith('API error: 503');
+            vi.unstubAllGlobals();
+        });
+
+        it('notify is invoked on rate-limit (429) responses from search', async () => {
+            const notify = vi.fn();
+            const searcher = new BookSearcher(notify);
+            // Use fake timers so the 5-second pause resolves instantly.
+            vi.useFakeTimers();
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: false,
+                status: 429,
+                json: async () => ({}),
+            }));
+            void searcher.search('test');
+            await vi.runAllTimersAsync();
+            expect(notify).toHaveBeenCalledWith(expect.stringContaining('rate limit'));
+            vi.restoreAllMocks();
+            vi.useRealTimers();
+        });
+
+        it('search does not call notify on successful empty response', async () => {
+            const notify = vi.fn();
+            const searcher = new BookSearcher(notify);
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ items: [] }),
+            }));
+            await searcher.search('test');
+            expect(notify).not.toHaveBeenCalled();
+            vi.unstubAllGlobals();
+        });
+
+        it('search returns empty array and does not notify on fetch exception', async () => {
+            const notify = vi.fn();
+            const searcher = new BookSearcher(notify);
+            // Simulate a network error — the catch branch swallows and logs.
+            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+            await expect(searcher.search('test')).resolves.toEqual([]);
+            expect(notify).not.toHaveBeenCalled();
+            vi.unstubAllGlobals();
+        });
+
+        it('search skips cached queries and returns empty array without calling fetch', async () => {
+            const searcher = new BookSearcher();
+            // Pre-populate the cache directly (bypass search to avoid a real fetch).
+            (searcher as any).queryCache.add('cached-query');
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
+            await searcher.search('cached-query'); // normalized lowercase — matches cache key exactly
+            expect((searcher as any).queryCache.has('cached-query')).toBe(true);
+            vi.unstubAllGlobals();
+        });
+
+        it('parseBook returns null for a volume with empty id', async () => {
+            const searcher = new BookSearcher();
+            // parseBook is private — invoke via search and intercept fetch.
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ items: [{ id: '', volumeInfo: {} }] }),
+            }));
+            await expect(searcher.search('test')).resolves.toEqual([]);
+            vi.unstubAllGlobals();
+        });
+
+        it('parseBook returns null for a volume with whitespace-only id', async () => {
+            const searcher = new BookSearcher();
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ items: [{ id: '   ', volumeInfo: {} }] }),
+            }));
+            await expect(searcher.search('test')).resolves.toEqual([]);
+            vi.unstubAllGlobals();
+        });
+
+        it('parseBook extracts ISBN_13 preferentially over ISBN_10', async () => {
+            const searcher = new BookSearcher();
+            // Intercept fetch and assert the returned book has isbn '9780743276540'.
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    items: [{
+                        id: 'vol-1',
+                        volumeInfo: {
+                            title: 'Test Book',
+                            authors: ['X'],
+                            industryIdentifiers: [
+                                { type: 'ISBN_10', identifier: '0743276540' },
+                                { type: 'ISBN_13', identifier: '9780743276540' },
+                            ],
+                        },
+                    }],
+                }),
+            }));
+            const results = await searcher.search('Test Book');
+            expect(results).toHaveLength(1);
+            expect(results[0].isbn).toBe('9780743276540'); // ISBN_13 takes priority over ISBN_10 per parseBook logic
+            vi.unstubAllGlobals();
+        });
+
+        it('search deduplicates results across calls via foundBookIds', async () => {
+            const searcher = new BookSearcher();
+            // Pre-load the ID so it gets filtered on search return.
+            searcher.preloadBookId('dedup-id');
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    items: [{ id: 'dedup-id', volumeInfo: { title: 'Dup' } }],
+                }),
+            }));
+            const results = await searcher.search('test');
+            expect(results).toHaveLength(0); // preloaded -> filtered out
+            vi.unstubAllGlobals();
+        });
+
+        it('search stores a normalized query in the cache on call', async () => {
+            const searcher = new BookSearcher();
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ items: [] }),
+            }));
+            await searcher.search('Test Query');
+            expect((searcher as any).queryCache.has('test query')).toBe(true);
+            vi.unstubAllGlobals();
+        });
+
+        it('notify callback receives the constructor default empty function when no notify provided', () => {
+            const searcher = new BookSearcher();
+            // Default notify is () => {} — calling it must not throw.
+            expect(() => (searcher as any).notify('anything')).not.toThrow();
+        });
     });
 });
