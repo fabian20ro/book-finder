@@ -451,6 +451,63 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('computeConfidence — metadata scoring', () => {
+        it('scores 50 when all metadata fields are populated and no query/ratings', () => {
+            const book = {
+                id: 'b-full',
+                title: 'Full Book',
+                authors: ['Author'],
+                publisher: 'Pub',
+                publishedDate: '2024',
+                description: 'A description',
+                isbn: '9781234567890',
+                pageCount: 200,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://books.google.com/books?id=b-full',
+            };
+
+            const score = computeConfidence(book as any);
+            expect(score).toBe(50);
+        });
+
+        it('gives 0 for title when title is "Unknown Title"', () => {
+            const book = {
+                id: 'b-unknown',
+                title: 'Unknown Title',
+                authors: ['Author'],
+                publisher: 'Pub',
+                publishedDate: '2024',
+                description: 'Desc',
+                isbn: '9781234567890',
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            const score = computeConfidence(book as any);
+            // authors(10) + isbn(10) + publisher(5) + publishedDate(5) + description(5) = 35
+            expect(score).toBe(35);
+        });
+
+        it('caps at 100 regardless of excessive inputs', () => {
+            const book = {
+                id: 'b-cap',
+                title: 'Cap Book',
+                authors: ['Author'],
+                publisher: 'Pub',
+                publishedDate: '2024',
+                description: 'Desc',
+                isbn: '9781234567890',
+                pageCount: 200,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://books.google.com/books?id=b-cap',
+            };
+
+            const score = computeConfidence(book as any, 5, 100, 'cap book');
+            expect(score).toBe(100);
+        });
+    });
+
     describe('preloadBookId', () => {
         it('prevents book from appearing in search results', async () => {
             searcher.preloadBookId('v1');
