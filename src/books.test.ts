@@ -387,6 +387,49 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('queryMatchRatio — diacritics normalization', () => {
+        it('strips combining marks so accented book titles match unaccented queries', () => {
+            const book = {
+                id: 'b-accent',
+                title: 'Café au Lait',
+                authors: ['José García'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // Query "cafe lait garcia" should match after NFKD normalization strips accents
+            const score = queryMatchRatio(book as any, 'cafe lait garcia');
+            expect(score).toBe(1);
+        });
+
+        it('treats accented and unaccented query terms equivalently against a book', () => {
+            const book = {
+                id: 'b-accent2',
+                title: 'Naïve Art',
+                authors: [],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            // Both queries should produce the same match ratio since diacritics are stripped
+            const scoreUnaccented = queryMatchRatio(book as any, 'naive art');
+            expect(scoreUnaccented).toBe(1);
+
+            const scoreAccented = queryMatchRatio(book as any, 'naïve art');
+            expect(scoreAccented).toBe(1);
+        });
+    });
+
     describe('queryMatchRatio — single-letter token merging', () => {
         it('merges consecutive single-letter initials so "J.K." matches as "jk"', () => {
             const book = {
@@ -448,6 +491,63 @@ describe('BookSearcher', () => {
             // query "abc" — single merged token "ab", unmatched third letter lost. 0/1 = 0.
             const scoreAll = queryMatchRatio(book as any, 'abc');
             expect(scoreAll).toBe(0);
+        });
+    });
+
+    describe('computeConfidence — metadata scoring', () => {
+        it('scores 50 when all metadata fields are populated and no query/ratings', () => {
+            const book = {
+                id: 'b-full',
+                title: 'Full Book',
+                authors: ['Author'],
+                publisher: 'Pub',
+                publishedDate: '2024',
+                description: 'A description',
+                isbn: '9781234567890',
+                pageCount: 200,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://books.google.com/books?id=b-full',
+            };
+
+            const score = computeConfidence(book as any);
+            expect(score).toBe(50);
+        });
+
+        it('gives 0 for title when title is "Unknown Title"', () => {
+            const book = {
+                id: 'b-unknown',
+                title: 'Unknown Title',
+                authors: ['Author'],
+                publisher: 'Pub',
+                publishedDate: '2024',
+                description: 'Desc',
+                isbn: '9781234567890',
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            const score = computeConfidence(book as any);
+            // authors(10) + isbn(10) + publisher(5) + publishedDate(5) + description(5) = 35
+            expect(score).toBe(35);
+        });
+
+        it('caps at 100 regardless of excessive inputs', () => {
+            const book = {
+                id: 'b-cap',
+                title: 'Cap Book',
+                authors: ['Author'],
+                publisher: 'Pub',
+                publishedDate: '2024',
+                description: 'Desc',
+                isbn: '9781234567890',
+                pageCount: 200,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://books.google.com/books?id=b-cap',
+            };
+
+            const score = computeConfidence(book as any, 5, 100, 'cap book');
+            expect(score).toBe(100);
         });
     });
 

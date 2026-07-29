@@ -671,6 +671,32 @@ describe('scanner', () => {
             expect(ocr.recognize).toHaveBeenCalled();
         });
 
+        it('calls resetProcessing and resumes auto-scan after OCR timeout', async () => {
+            state.update({ autoScan: true });
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            // Reject synchronously with the timeout error message so handleScanError's
+            // message check (err.message === 'OCR timed out') triggers resetProcessing.
+            (ocr.recognize as any).mockRejectedValueOnce(new Error('OCR timed out'));
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+
+            // First scan: OCR rejected with timeout message → resetProcessing called
+            expect(ocr.resetProcessing).toHaveBeenCalled();
+            expect(state.getState().scanCount).toBe(0);
+            expect(consoleSpy).toHaveBeenCalledWith('Scan frame error:', expect.any(Error));
+
+            // scheduleNext runs unconditionally after the catch, so next interval resumes
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(camera.captureFrame).toHaveBeenCalled();
+        });
+
         it('recovers the scan loop after ocr.verifyReadiness rejects', async () => {
             state.update({ autoScan: true });
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
