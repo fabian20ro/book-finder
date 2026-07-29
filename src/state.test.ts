@@ -582,6 +582,35 @@ describe('state', () => {
             expect(getState().candidateBooks).toHaveLength(0);
             expect(listener).not.toHaveBeenCalled();
         });
+
+        it('handles mixed new and duplicate entries in a single batch (cross-list dedup)', () => {
+            addBook(makeBook({ id: 'in-books' }));
+            addCandidates([makeBook({ id: 'c-new-1' })]);
+
+            const listener = vi.fn();
+            on('change', listener);
+            addCandidates([
+                makeBook({ id: 'new-a' }),       // new → added
+                makeBook({ id: 'in-books' }),    // exists in books → skipped
+                makeBook({ id: 'c-new-1' }),     // exists in candidates → skipped
+                makeBook({ id: 'new-b' }),       // new → added
+            ]);
+
+            expect(getState().candidateBooks).toHaveLength(3);
+            const ids = getState().candidateBooks.map((b) => b.id);
+            expect(ids).toEqual(['c-new-1', 'new-a', 'new-b']);
+            expect(listener).toHaveBeenCalled();
+        });
+
+        it('does not re-add a candidate already present in candidateBooks from prior call', () => {
+            addCandidates([makeBook({ id: 'persisted' })]);
+            const listener = vi.fn();
+            on('change', listener);
+            addCandidates([makeBook({ id: 'persisted' }), makeBook({ id: 'fresh' })]);
+
+            expect(getState().candidateBooks).toHaveLength(2);
+            expect(listener).toHaveBeenCalledTimes(1); // only one emit for fresh addition
+        });
     });
 
     describe('removeCandidateById', () => {
