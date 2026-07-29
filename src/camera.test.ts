@@ -394,6 +394,55 @@ describe('CameraManager', () => {
         });
     });
 
+    describe('withMetadataTimeout', () => {
+        it('rejects with timeout message after ms elapsed', async () => {
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {},
+                configurable: true,
+            });
+            video.addEventListener = (() => {}) as typeof video.addEventListener;
+
+            vi.useFakeTimers();
+
+            const camera = new CameraManager(video, canvas);
+            const startPromise = camera.start().catch((err: unknown) => err);
+
+            // Advance timers past 5000ms to trigger the timeout rejection synchronously.
+            await vi.advanceTimersByTimeAsync(6000);
+
+            const result = await startPromise;
+
+            expect(result).toBeInstanceOf(Error);
+            expect((result as Error).message).toContain('Camera metadata not ready within');
+        });
+
+        it('propagates inner rejection instead of timing out', async () => {
+            // Override the mock so srcObject setter rejects synchronously.
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {
+                    throw new Error('Simulated camera failure');
+                },
+                configurable: true,
+            });
+
+            vi.useFakeTimers();
+
+            const camera = new CameraManager(video, canvas);
+            const startPromise = camera.start().catch((err: unknown) => err);
+
+            // Advance timers past 5000ms — the inner rejection should already have
+            // cleared the timer and rejected with its own message.
+            await vi.advanceTimersByTimeAsync(6000);
+
+            const result = await startPromise;
+
+            expect(result).toBeInstanceOf(Error);
+            expect((result as Error).message).toBe('Simulated camera failure');
+        });
+    });
+
     describe('verifyReadiness', () => {
         it('succeeds when stream is active and video is ready', async () => {
             const camera = new CameraManager(video, canvas);
