@@ -1070,4 +1070,41 @@ describe('isHighConfidence', () => {
   it('returns false for zero confidence', () => {
     expect(isHighConfidence(makeBook({ confidence: 0 }))).toBe(false);
   });
+
+  describe('preloadBookId / removeBookId — dedup control', () => {
+    it('preloaded IDs are excluded from search results via dedup filter', async () => {
+      const searcher = new BookSearcher();
+      searcher.preloadBookId('v-preloaded');
+
+      vi.stubGlobal('fetch', mockFetchResponse(
+        googleBooksResponse([volume('v-preloaded', 'Preloaded Book')]),
+      ));
+
+      const results = await searcher.search('preloaded query');
+      expect(results).toHaveLength(0);
+    });
+
+    it('removeBookId re-enables a preloaded ID for future search', async () => {
+      const searcher = new BookSearcher();
+      searcher.preloadBookId('v-remove-me');
+
+      vi.stubGlobal('fetch', mockFetchResponse(
+        googleBooksResponse([volume('v-remove-me', 'Remove Me Book')]),
+      ));
+
+      // First search: preloaded ID is filtered out by dedup.
+      const firstResults = await searcher.search('remove query 1');
+      expect(firstResults).toHaveLength(0);
+
+      searcher.removeBookId('v-remove-me');
+
+      vi.stubGlobal('fetch', mockFetchResponse(
+        googleBooksResponse([volume('v-remove-me', 'Remove Me Book')]),
+      ));
+
+      const secondResults = await searcher.search('remove query 2');
+      expect(secondResults).toHaveLength(1);
+      expect(secondResults[0].id).toBe('v-remove-me');
+    });
+  });
 });
