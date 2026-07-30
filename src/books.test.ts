@@ -589,6 +589,25 @@ describe('BookSearcher', () => {
             expect(score).toBeGreaterThanOrEqual(40);
             expect(getConfidenceLevel(score)).toBe('Medium');
         });
+
+        it('ignores whitespace-only author strings for the authors scoring bonus', () => {
+            const book = {
+                id: 'b-blank-authors',
+                title: 'Blank Author Book',
+                authors: ['   ', '\t'],
+                publisher: null,
+                publishedDate: null,
+                description: null,
+                isbn: null,
+                pageCount: null,
+                thumbnailUrl: null,
+                infoLink: null,
+            };
+
+            const score = computeConfidence(book as any);
+            // title(10) only — blank authors must not inflate the +10 bonus
+            expect(score).toBe(10);
+        });
     });
 
     describe('preloadBookId', () => {

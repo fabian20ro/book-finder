@@ -108,7 +108,8 @@ export function computeConfidence(
 
   // Metadata completeness (up to 50)
   if (book.title && book.title !== "Unknown Title") score += 10;
-  if (book.authors.length > 0) score += 10;
+  const realAuthors = book.authors.filter((a) => a.trim().length > 0);
+  if (realAuthors.length > 0) score += 10;
   if (book.isbn) score += 10;
   if (book.thumbnailUrl) score += 5;
   if (book.description) score += 5;
