@@ -537,6 +537,23 @@ describe('state', () => {
             expect(getState().candidateBooks).toHaveLength(0);
         });
 
+        it('rejects candidate whose normalized id matches an existing book after whitespace collapse', () => {
+            addBook(makeBook({ id: 'collapsable-id' }));
+            const result = addCandidates([makeBook({ id: '  collapsable-id  ', title: 'Different Title' })]);
+            expect(result).toBeUndefined(); // void return — side-effect only
+            expect(getState().candidateBooks).toHaveLength(0);
+        });
+
+        it('does not re-emit change when adding all duplicates to candidates', () => {
+            addCandidates([makeBook({ id: 'c-dup' })]);
+            const listener = vi.fn();
+            on('change', listener);
+            // Re-add with whitespace-collapsed id — should be deduped, no emit
+            addCandidates([makeBook({ id: '  c-dup  ', title: 'Another' })]);
+            expect(listener).not.toHaveBeenCalled();
+            expect(getState().candidateBooks).toHaveLength(1);
+        });
+
         it('re-adds a book as candidate after clearBooks empties the books list', () => {
             addBook(makeBook({ id: 'b2', title: 'Original Title' }));
             clearBooks();
