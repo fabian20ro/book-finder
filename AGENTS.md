@@ -9,7 +9,7 @@
 - Tesseract.js is loaded from CDN in `index.html` as a global — do not install via npm or import it as a module
 - Service worker (`public/sw.js`) must remain plain JavaScript — Vite does not process it
 - Google Books API: 1000 requests/day hard limit, no API key required — do not add API key infrastructure
-- `manifest.json` `start_url` is hardcoded to `/find-the-book/` (GitHub Pages path) — do not change unless repo is renamed
+- `manifest.json` `start_url` is hardcoded to `/book-finder/` (GitHub Pages path) — do not change unless repo is renamed
 
 ## Legacy & Deprecated
 

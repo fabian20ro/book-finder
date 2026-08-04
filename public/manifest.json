@@ -1,7 +1,7 @@
 {
-    "name": "Find The Book",
-    "short_name": "FindBook",
-    "start_url": "/find-the-book/",
+    "name": "Book Finder",
+    "short_name": "BookFinder",
+    "start_url": "/book-finder/",
     "display": "standalone",
     "orientation": "portrait",
     "background_color": "#000000",

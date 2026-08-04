@@ -355,3 +355,16 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-08-04] Migrate the project to Book Finder
+
+**Context:** The original Git transport was disabled even though the repository API remained available, so the project moved from `find-the-book` to a fresh `book-finder` repository.
+**What happened:**
+- Preserved all GitHub branches and local recovery commits in a verified migration bundle.
+- Updated repository, GitHub Pages, workflow badge, package, PWA manifest, and visible product-name references.
+- Kept the original GitHub repository as the archived `find-the-book-disabled-archive` audit record.
+**Outcome:** Success — the application now targets `https://fabian20ro.github.io/book-finder/` from `fabian20ro/book-finder`.
+**Insight:** Repository renames for a path-based PWA must update both Vite's base path and the manifest start URL before the first Pages deployment.
+**Promoted to Lessons Learned:** No
+
+---

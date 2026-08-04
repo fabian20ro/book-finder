@@ -17,7 +17,7 @@ function swVersionPlugin(): Plugin {
 }
 
 export default defineConfig({
-  base: '/find-the-book/',
+  base: '/book-finder/',
   plugins: [swVersionPlugin()],
     test: {
       environment: 'jsdom',

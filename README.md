@@ -1,8 +1,8 @@
-[![Deploy to GitHub Pages](https://github.com/fabian20ro/find-the-book/actions/workflows/deploy.yml/badge.svg)](https://github.com/fabian20ro/find-the-book/actions/workflows/deploy.yml)
+[![Deploy to GitHub Pages](https://github.com/fabian20ro/book-finder/actions/workflows/deploy.yml/badge.svg)](https://github.com/fabian20ro/book-finder/actions/workflows/deploy.yml)
 
-**Live site:** [https://fabian20ro.github.io/find-the-book/](https://fabian20ro.github.io/find-the-book/)
+**Live site:** [https://fabian20ro.github.io/book-finder/](https://fabian20ro.github.io/book-finder/)
 
-# Find The Book
+# Book Finder
 
 A Progressive Web App for fast book scanning. Point your camera at a bookshelf and the app
 continuously identifies books by reading spine/cover text via in-browser OCR, then matching
@@ -48,7 +48,7 @@ against the Google Books database.
 ## Project Structure
 
 ```
-find-the-book/
+book-finder/
 ├── index.html              # Single-page app entry point
 ├── package.json            # Dependencies & scripts
 ├── tsconfig.json           # TypeScript configuration
