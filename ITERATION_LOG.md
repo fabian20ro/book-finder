@@ -368,3 +368,13 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-08-04] Allow manual GitHub Pages deployment
+
+**Context:** The first post-migration workflow dispatch verified the build but skipped artifact upload and deployment because those steps only accepted push events.
+**What happened:** Kept pull requests build-only while allowing both pushes and manual workflow dispatches to upload and deploy the Pages artifact.
+**Outcome:** Success — a manual recovery deploy can now publish the site after future repository-level incidents.
+**Insight:** A workflow that advertises `workflow_dispatch` should not silently exclude that event from its deployment jobs.
+**Promoted to Lessons Learned:** No
+
+---
