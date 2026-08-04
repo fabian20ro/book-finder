@@ -230,6 +230,22 @@ describe('CameraManager', () => {
             expect(camera.captureFrame()).toBeNull();
         });
 
+        it('returns null before metadata arrives (canvas dimensions are zero)', async () => {
+            // Override the default mock's srcObject setter so readyState stays at 0.
+            // This simulates a real-world scenario where captureFrame() is called
+            // immediately after construction, before video metadata has loaded.
+            // The production guard (line 67: !this.video.videoWidth) must return null
+            // rather than drawing to an uninitialized canvas.
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {},
+                configurable: true,
+            });
+
+            const camera = new CameraManager(video, canvas);
+            expect(camera.captureFrame()).toBeNull();
+        });
+
         it('returns canvas after drawing frame', async () => {
             const camera = new CameraManager(video, canvas);
             await camera.start();
