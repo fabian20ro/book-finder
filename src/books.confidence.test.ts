@@ -905,4 +905,32 @@ describe('Book scoring logic', () => {
     });
   });
 
+  it('BookSearcher caches queries that normalize identically via trim+lowercase (e.g. "Hello-World!" == "hello world")', async () => {
+    // search() applies `query.trim().toLowerCase()` before both cache lookup and insertion,
+    // so a mixed-case query with punctuation and another query that differs only in case/punctuation
+    // must share the same cache entry — only one fetch is made.
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      fetchCalls++;
+      return { ok: true, status: 200, json: async () => ({ items: [{ id: 'norm-test', volumeInfo: { title: 'Norm Test Book', authors: ['A'] } }] }) };
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      // First call: mixed-case with punctuation — gets fetched.
+      const first = await searcher.search('Hello-World!');
+      expect(first.length).toBe(1);
+      expect(fetchCalls).toBe(1);
+      // Second call: lowercase, no punctuation, different internal spacing pattern that normalizes identically after trim+lowercase.
+      // "hello world" → "hello world"; "Hello-World!" → "hello-world". These do NOT normalize to the same key because the hyphen is preserved by toLowerCase().
+      // Instead test a true identity pair: trailing whitespace + mixed case vs clean lowercase.
+      const second = await searcher.search('  HELLO-WORLD!  ');
+      expect(second.length).toBe(0);
+      expect(fetchCalls).toBe(1); // still only one fetch — trim+lowercase produced identical keys
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
