@@ -103,6 +103,7 @@ function normalizeBook(book: Book): Book {
 }
 
 export function addBook(book: Book): boolean {
+    if (!book || typeof book !== 'object') return false;
     const normalized = normalizeBook(book);
     if (state.books.some((b) => b.id === normalized.id)) return false;
 
