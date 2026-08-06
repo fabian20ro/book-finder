@@ -447,4 +447,37 @@ describe('parsing stored books', () => {
         // Null authors → Array.isArray(false) → []
         expect(result[2].authors).toEqual([]);
     });
+
+    it('returns empty array for an actual empty JSON array', () => {
+        const result = parseStoredBooks('[]');
+
+        expect(result).toHaveLength(0);
+    });
+
+    it('returns empty array when all entries are invalid objects', () => {
+        const json = JSON.stringify([
+            { id: 123, title: 'Number Id' },
+            { title: 'No Id At All' },
+            { id: '', title: 'Empty Id' },
+            null,
+            undefined,
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(0);
+    });
+
+    it('rejects entry with valid title but non-string id (trim check)', () => {
+        const json = JSON.stringify([
+            // id is a number — typeof !== 'string' → rejected before trim
+            { id: 1, title: 'Numeric Id' },
+            // id becomes empty after trim — filtered by id === '' check
+            { id: '   ', title: 'Whitespace Only Id' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(0);
+    });
 });

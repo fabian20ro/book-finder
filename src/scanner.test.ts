@@ -413,6 +413,13 @@ describe('scanner', () => {
             await vi.advanceTimersByTimeAsync(2000);
             expect(camera.captureFrame).toHaveBeenCalled();
         });
+
+        it('is a no-op when called without an active scan timer', () => {
+            state.update({ autoScan: true });
+
+            // Do NOT call startScanning — no timer exists, isPaused already false
+            expect(() => pauseAutoScan()).not.toThrow();
+        });
     });
 
     describe('visibility change', () => {
