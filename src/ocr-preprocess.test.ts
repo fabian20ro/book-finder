@@ -280,6 +280,35 @@ describe('ocr utilities', () => {
                 expect(resultData[i * 4 + 2]).toBe(75);
             }
         });
+
+        it('preserves canvas dimensions', () => {
+            // preprocessCanvas creates a new canvas; verify its width/height match the input.
+            const w = 64, h = 32;
+            canvas.width = w;
+            canvas.height = h;
+            const result = preprocessCanvas(canvas);
+            expect(result.width).toBe(w);
+            expect(result.height).toBe(h);
+        });
+
+        it('converts non-grayscale input to grayscale (equal R, G, B)', () => {
+            // Grayscale conversion sets R=G=B for each pixel; the output should have identical
+            // red/green/blue channels. This verifies the per-pixel assignment in preprocessCanvas.
+            canvas.width = 2;
+            canvas.height = 1;
+            const data = new Uint8ClampedArray([
+                255, 0, 128, 255,   // pixel 0: colored input
+                40, 80, 160, 255    // pixel 1: another colored input
+            ]);
+            mockCtx.putImageData(new ImageData(data, 2, 1));
+
+            const result = preprocessCanvas(canvas);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 2, 1).data;
+            for (let i4 = 0; i4 < 8; i4 += 4) {
+                expect(resultData[i4]).toBe(resultData[i4 + 1]); // R === G
+                expect(resultData[i4 + 1]).toBe(resultData[i4 + 2]); // G === B
+            }
+        });
     });
 
     describe('frameBrightness', () => {
