@@ -246,6 +246,16 @@ describe('CameraManager', () => {
             expect(camera.captureFrame()).toBeNull();
         });
 
+        it('returns null when called before start without stream (un-started state)', () => {
+            // The production guard at line 66 returns null whenever videoWidth is falsy.
+            // Before any call to start(), the mock's default srcObject setter does not set
+            // readyState=2, so videoWidth remains 0 and captureFrame must return null rather
+            // than drawing to an uninitialized canvas — this is a deterministic contract check
+            // that prevents regressions if production guard logic changes.
+            const camera = new CameraManager(video, canvas);
+            expect(camera.captureFrame()).toBeNull();
+        });
+
         it('returns canvas after drawing frame', async () => {
             const camera = new CameraManager(video, canvas);
             await camera.start();
