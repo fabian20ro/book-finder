@@ -626,6 +626,19 @@ describe('scanner', () => {
             // Combined includes all original lines joined with spaces
             expect(books.search).toHaveBeenCalledWith('hi bye ok go no');
         });
+        it('sends combined query before any individual long-line queries', async () => {
+            const books = createMockBookSearcher();
+            // Three long lines: 1 combined + 3 individuals = 4 total, all in input order after combined.
+            await searchTextBlocks(toOcrLines(['alpha text', 'beta line', 'gamma data']), books as any);
+
+            const callArgs = (books.search as any).mock.calls.map((c: any[]) => c[0]);
+            expect(callArgs).toEqual([
+                'alpha text beta line gamma data', // combined first
+                'alpha text',                        // individual 1 in input order
+                'beta line',                         // individual 2
+                'gamma data',                        // individual 3
+            ]);
+        });
     });
 
     describe('dark-frame skip', () => {
