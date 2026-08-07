@@ -59,6 +59,20 @@ export function $first(selector: string): HTMLElement | null {
 }
 
 /**
+ * Walk up the DOM tree from `el` and return the first ancestor matching
+ * `selector`, or `null` when no match is found. Never throws — the search
+ * simply stops at the document root.
+ */
+export function $closest(el: HTMLElement, selector: string): HTMLElement | null {
+    let node: HTMLElement | null = el;
+    while (node) {
+        if (node.matches(selector)) return node;
+        node = node.parentElement as HTMLElement | null;
+    }
+    return null;
+}
+
+/**
  * Safe getContext('2d') that throws instead of returning null.
  */
 export function getContext2D(canvas: HTMLCanvasElement): CanvasRenderingContext2D {

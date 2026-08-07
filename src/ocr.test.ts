@@ -568,6 +568,37 @@ describe('TextRecognizer', () => {
             expect(results).toEqual([]);
         });
 
+        it('filters out lines that are empty after trim even with high confidence', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Lines that are whitespace-only become '' after trim — length 0 < DEFAULT_MIN_LINE_LENGTH (3)
+            mockRecognize.mockResolvedValue({
+                data: {
+                    lines: [
+                        { text: '   ', confidence: 99 },
+                        { text: '\t\n', confidence: 85 },
+                        { text: '', confidence: 100 },
+                        { text: 'Real Text', confidence: 70 },
+                    ],
+                },
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([
+                { text: 'Real Text', confidence: 70 },
+            ]);
+        });
+
         it('filters out lines with non-string text (defensive against malformed Tesseract)', async () => {
             const mockRecognize = vi.fn();
             const mockWorker = {

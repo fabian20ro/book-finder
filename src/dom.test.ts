@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { $, $$, $as, $first, getContext2D, trySelector } from './dom';
+import { $, $$, $as, $first, getContext2D, trySelector, $closest } from './dom';
 
 describe('dom helpers', () => {
     beforeEach(() => {
@@ -214,6 +214,38 @@ describe('dom helpers', () => {
             document.body.innerHTML = '<div id="other">X</div>';
             const el = trySelector(['.a', '.b', '#nonexistent']);
             expect(el).toBeNull();
+        });
+    });
+
+    describe('$closest', () => {
+        it('returns the nearest matching ancestor', () => {
+            document.body.innerHTML = '<div class="outer"><span class="inner">text</span></div>';
+            const span = document.querySelector('.inner') as HTMLElement;
+            const el = $closest(span, '.outer');
+            expect(el).not.toBeNull();
+            expect(el!.className).toBe('outer');
+        });
+
+        it('traverses multiple levels up the DOM tree', () => {
+            document.body.innerHTML = '<div class="grandparent"><div class="parent"><span class="child">text</span></div></div>';
+            const child = document.querySelector('.child') as HTMLElement;
+            const el = $closest(child, '.grandparent');
+            expect(el).not.toBeNull();
+            expect(el!.className).toBe('grandparent');
+        });
+
+        it('returns the element itself when it matches', () => {
+            document.body.innerHTML = '<div class="match">text</div>';
+            const el = document.querySelector('.match') as HTMLElement;
+            const result = $closest(el, '.match');
+            expect(result).toBe(el);
+        });
+
+        it('returns null when no ancestor matches', () => {
+            document.body.innerHTML = '<div class="only">text</div>';
+            const el = document.querySelector('.only') as HTMLElement;
+            const result = $closest(el, '.nonexistent');
+            expect(result).toBeNull();
         });
     });
 });
