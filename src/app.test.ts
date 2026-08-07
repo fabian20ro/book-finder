@@ -676,4 +676,29 @@ describe('app', () => {
 
         expect(getTestState().books).toHaveLength(0);
     });
+
+    it('onRemoveBook forwards the removed id to BookSearcher.removeBookId on success', async () => {
+        const { getState: getTestState, addCandidates } = await import('./state');
+        const bookA = { id: 'remove-a', title: 'Remove A', authors: [] };
+        const bookB = { id: 'keep-b', title: 'Keep B', authors: [] };
+        addCandidates([bookA as any, bookB as any]);
+
+        capturedHandlers.onAddCandidate('remove-a');
+        expect(getTestState().books).toHaveLength(1);
+
+        vi.clearAllMocks();
+        capturedHandlers.onRemoveBook(0);
+
+        expect(mockRemoveBookId).toHaveBeenCalledWith('remove-a');
+    });
+
+    it('onRemoveBook does nothing when the index is out of bounds', async () => {
+        vi.clearAllMocks();
+
+        const removed = capturedHandlers.onRemoveBook(999);
+
+        expect(mockRemoveBookId).not.toHaveBeenCalled();
+        // No persistence change — localStorage should still reflect zero books.
+        expect(JSON.parse(localStorage.getItem('ftb-books') ?? '[]')).toHaveLength(0);
+    });
 });
