@@ -470,6 +470,14 @@ describe('CameraManager', () => {
     });
 
     describe('verifyReadiness', () => {
+        it('rejects before start (no stream initialized)', async () => {
+            const camera = new CameraManager(video, canvas);
+
+            await expect(camera.verifyReadiness()).rejects.toThrow(
+                'Camera stream is not active.',
+            );
+        });
+
         it('succeeds when stream is active and video is ready', async () => {
             const camera = new CameraManager(video, canvas);
             await camera.start();
