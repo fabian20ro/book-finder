@@ -486,5 +486,89 @@ describe('ocr utilities', () => {
             const result = await recognizer.recognize(canvas);
             expect(result).toEqual([]);
         });
+
+        it('filters out lines with confidence below minLineConfidence', async () => {
+            // The recognize() pipeline filters by both text length and line confidence.
+            // This test verifies that low-confidence results are dropped before reaching the caller,
+            // preventing poor OCR output from being surfaced to the user.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: 'valid line', confidence: 80 },
+                        { text: 'noisy line', confidence: 10 }, // below default threshold of 40
+                        { text: 'also valid', confidence: 95 }
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toHaveLength(2);
+            expect(result[0].text).toBe('valid line');
+            expect(result[0].confidence).toBe(80);
+            expect(result[1].text).toBe('also valid');
+        });
+
+        it('filters out lines shorter than minLineLength', async () => {
+            // Short OCR artifacts (single characters, punctuation noise) should be dropped.
+            // The minLineLength filter ensures only substantive text reaches the caller.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: 'ab', confidence: 90 },      // length 2 < default 3 → filtered out
+                        { text: 'abc', confidence: 85 },     // length 3 = default threshold → kept
+                        { text: 'hello world', confidence: 70 }
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toHaveLength(2);
+            expect(result[0].text).toBe('abc');
+            expect(result[1].text).toBe('hello world');
+        });
+
+        it('trims whitespace from recognized text', async () => {
+            // Tesseract output often includes leading/trailing whitespace in line text.
+            // The recognize() pipeline trims this before returning, ensuring consistent data.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: '  hello world  ', confidence: 90 },
+                        { text: '\t  spaces \n', confidence: 85 }
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result[0].text).toBe('hello world');
+            expect(result[1].text).toBe('spaces');
+        });
+
+        it('returns empty array when Tesseract returns no lines', async () => {
+            // When a canvas contains no text, Tesseract may return an empty lines array.
+            // The pipeline should pass through without error or spurious results.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({ data: { lines: [] } })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toEqual([]);
+        });
+
+        it('sets isProcessing back to false after recognize completes', async () => {
+            // The finally block in recognize() must reset isProcessing so subsequent calls work.
+            // A lingering true value would block all future OCR on that recognizer instance.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({ data: { lines: [] } })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            await recognizer.recognize(canvas);
+            expect((recognizer as any).isProcessing).toBe(false);
+        });
     });
 });
