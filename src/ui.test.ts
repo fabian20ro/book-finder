@@ -211,6 +211,38 @@ describe('ui', () => {
             document.getElementById('btn-upload-image')!.click();
             expect(clickSpy).toHaveBeenCalled();
         });
+
+        it('calls onImageUpload with the selected file when file input fires change', () => {
+            const photoInput = document.getElementById('photo-input') as HTMLInputElement;
+            const testFile = new File(['dummy'], 'test.jpg', { type: 'image/jpeg' });
+            Object.defineProperty(photoInput, 'files', { value: { 0: testFile, length: 1 } });
+
+            const changeEvent = new Event('change', { bubbles: true });
+            photoInput.dispatchEvent(changeEvent);
+
+            expect(handlers.onImageUpload).toHaveBeenCalledWith(testFile);
+        });
+
+        it('clears file input after uploading a file', () => {
+            const photoInput = document.getElementById('photo-input') as HTMLInputElement;
+            const testFile = new File(['dummy'], 'test.jpg', { type: 'image/jpeg' });
+            Object.defineProperty(photoInput, 'files', { value: { 0: testFile, length: 1 } });
+
+            const changeEvent = new Event('change', { bubbles: true });
+            photoInput.dispatchEvent(changeEvent);
+
+            expect((photoInput as HTMLInputElement).value).toBe('');
+        });
+
+        it('does not call onImageUpload when file input fires change with no files', () => {
+            const photoInput = document.getElementById('photo-input') as HTMLInputElement;
+            Object.defineProperty(photoInput, 'files', { value: null });
+
+            const changeEvent = new Event('change', { bubbles: true });
+            photoInput.dispatchEvent(changeEvent);
+
+            expect(handlers.onImageUpload).not.toHaveBeenCalled();
+        });
     });
 
     describe('auto-scan toggle UI', () => {
