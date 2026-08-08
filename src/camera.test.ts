@@ -215,11 +215,16 @@ describe('CameraManager', () => {
                 configurable: true,
             });
 
+            // Spy on video.addEventListener so we can verify no listener is attached,
+            // since the readyState >= 2 branch skips it entirely at start time.
+            vi.spyOn(video, 'addEventListener');
+
             const camera = new CameraManager(video, canvas);
             await camera.start();
 
-            // The loadedmetadata listener must NOT have been registered since readyState was already >=2.
-            expect(mockStream.track.addEventListener).not.toHaveBeenCalledWith('loadedmetadata', expect.any(Function));
+            // The loadedmetadata listener must NOT have been registered on the video element,
+            // because readyState was already >= 2 so the immediate-resolution branch is taken.
+            expect(video.addEventListener).not.toHaveBeenCalledWith('loadedmetadata', expect.any(Function));
         });
     });
 

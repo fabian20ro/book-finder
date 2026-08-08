@@ -207,7 +207,13 @@ export class BookSearcher {
         this.notify(`API error: ${response.status}`);
         return [];
       }
-      const data: GoogleBooksResponse = await response.json();
+      let data: GoogleBooksResponse;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("Book search error:", parseError);
+        return [];
+      }
 
       return (data.items || [])
         .map((item) => this.parseBook(item, query))

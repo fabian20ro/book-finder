@@ -223,6 +223,10 @@ describe('scanner', () => {
 
             expect(state.getState().scanCount).toBe(0);
             expect(consoleError).toHaveBeenCalledWith('Scan once error:', expect.any(Error));
+            // Negative assertions: no side effects beyond expected error handling
+            expect(ocr.resetProcessing).not.toHaveBeenCalled();
+            expect(books.search).not.toHaveBeenCalled();
+            expect(state.getState().candidateBooks).toHaveLength(0);
         });
     });
     });

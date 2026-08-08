@@ -6,11 +6,13 @@ export interface OcrLine {
 export interface TextRecognizerOptions {
     minLineLength?: number;
     minLineConfidence?: number;
+    minFrameBrightness?: number;
     onSetLanguage?: (lang: string) => void;
 }
 
 const DEFAULT_MIN_LINE_LENGTH = 3;
 const DEFAULT_MIN_LINE_CONFIDENCE = 40;
+const DEFAULT_MIN_FRAME_BRIGHTNESS = 30;
 
 const COMMON_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:\'-&()!?""/';
 export const LANG_WHITELISTS: Record<string, string> = {

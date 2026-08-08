@@ -668,10 +668,12 @@ describe('Book logic', () => {
         });
 
         it('queryMatchRatio merges consecutive single-letter initials in query', () => {
-            // splitAndMergeShort: "J. K." produces tokens ["jk"] → one word, not zero.
+            // splitAndMergeShort: "J. K." produces tokens ["jk"] — one merged word, not zero.
             const book = { id: '1', title: 'JK Rowling', authors: ['J.K. Rowling'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
-            // queryWords after merge: ['jk']; book title words include 'jkr', 'rowling' — 'jk' merges with 'r' from Rowling → 'jkr'? Actually let's test a clearer case.
+            // queryWords after merge from "J. K.": ['jk']; book text "JK Rowling" yields {'jk', 'rowling'} — full match.
+            expect(queryMatchRatio(book, 'J. K.')).toBe(1);
         });
+
 
         it('queryMatchRatio returns 1 when query is fully merged short tokens present in book', () => {
             // The merge path: query "J K" splits to ['j','k'] which merge into ['jk']. Book title "Jack" contains 'jack' not 'jk'. Test a case where the merged token matches.
