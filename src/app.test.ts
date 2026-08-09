@@ -50,6 +50,7 @@ vi.mock('./scanner', () => ({
     scanOnce: vi.fn().mockResolvedValue(undefined),
     resumeAutoScan: vi.fn(),
     pauseAutoScan: vi.fn(),
+    searchTextBlocks: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('./export', () => ({
