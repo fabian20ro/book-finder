@@ -50,6 +50,7 @@ vi.mock('./scanner', () => ({
     scanOnce: vi.fn().mockResolvedValue(undefined),
     resumeAutoScan: vi.fn(),
     pauseAutoScan: vi.fn(),
+    searchTextBlocks: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('./export', () => ({
@@ -497,6 +498,14 @@ describe('app', () => {
         capturedHandlers.onAutoScanToggle(); // turn off
 
         expect(pauseAutoScan).toHaveBeenCalledOnce();
+    });
+
+    it('does not resume auto-scan when camera is not active', async () => {
+        const { resumeAutoScan } = await import('./scanner');
+
+        capturedHandlers.onAutoScanToggle();
+
+        expect(resumeAutoScan).not.toHaveBeenCalled();
     });
 
     it('does not call resume/pause auto-scan when there is no camera', async () => {

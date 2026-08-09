@@ -98,6 +98,24 @@ export class CameraManager {
         if (!this.isActive) return null;
         return { width: this.video.videoWidth, height: this.video.videoHeight };
     }
+
+    /**
+     * Pre-flight check for camera availability before calling start().
+     * Distinguishes "no video device found" from "permission permanently blocked",
+     * enabling actionable user feedback without invoking getUserMedia.
+     */
+    async requestCameraPermission(): Promise<{ hasVideoDevice: boolean; canRequestPermission: boolean }> {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoInput = devices.some((d) => d.kind === 'videoinput');
+            return { hasVideoDevice: videoInput, canRequestPermission: true };
+        } catch (err) {
+            // enumerateDevices may reject in restricted contexts (e.g. iframe with camera permission denied).
+            // Treat as "can request anyway" — getUserMedia will give the real answer.
+            console.warn('Camera pre-flight check failed:', err);
+            return { hasVideoDevice: false, canRequestPermission: true };
+        }
+    }
 }
 
 /**
