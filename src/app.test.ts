@@ -500,6 +500,14 @@ describe('app', () => {
         expect(pauseAutoScan).toHaveBeenCalledOnce();
     });
 
+    it('does not resume auto-scan when camera is not active', async () => {
+        const { resumeAutoScan } = await import('./scanner');
+
+        capturedHandlers.onAutoScanToggle();
+
+        expect(resumeAutoScan).not.toHaveBeenCalled();
+    });
+
     it('does not call resume/pause auto-scan when there is no camera', async () => {
         const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
 
