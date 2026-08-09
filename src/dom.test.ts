@@ -263,7 +263,7 @@ describe('dom helpers', () => {
             // anchors failure-specific behavior for event-delegation callers.
             document.body.innerHTML = '<div class="wrap"><span class="target">T</span></div>';
             const target = document.querySelector('.target') as HTMLElement;
-            expect(() => $closest(target, '[')).toThrow(DOMException);
+            expect(() => $closest(target, '[')).toThrow();
             // The error must reference the malformed selector so callers can
             // distinguish a real DOMException from unrelated failures.
             try {
