@@ -242,7 +242,12 @@ function handleAutoScanToggle(): void {
     update({ autoScan: newVal });
     saveAutoScanPref();
 
-    if (!cameraManager) return;
+    if (!cameraManager) {
+        if (newVal) {
+            toast('Start the camera first to use auto-scan');
+        }
+        return;
+    }
 
     if (newVal) {
         // Turning auto-scan ON — resume the loop
