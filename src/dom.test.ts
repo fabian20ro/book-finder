@@ -247,5 +247,14 @@ describe('dom helpers', () => {
             const result = $closest(el, '.nonexistent');
             expect(result).toBeNull();
         });
+
+        it('throws on malformed selector — never silently returns null', () => {
+            // Validates the throwing contract: an invalid CSS selector propagates
+            // from .matches() through $closest rather than being swallowed. This
+            // anchors failure-specific behavior for event-delegation callers.
+            document.body.innerHTML = '<div class="wrap"><span class="target">T</span></div>';
+            const target = document.querySelector('.target') as HTMLElement;
+            expect(() => $closest(target, '[')).toThrow();
+        });
     });
 });
