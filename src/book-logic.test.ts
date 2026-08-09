@@ -607,6 +607,30 @@ describe('Book logic', () => {
             vi.unstubAllGlobals();
         });
 
+        it('parseBook falls back to first available identifier when no ISBN_13 or ISBN_10 is present', async () => {
+            const searcher = new BookSearcher();
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    items: [{
+                        id: 'vol-other',
+                        volumeInfo: {
+                            title: 'Other ID Book',
+                            authors: ['X'],
+                            industryIdentifiers: [
+                                { type: 'OTHER', identifier: '978-1234567890' },
+                            ],
+                        },
+                    }],
+                }),
+            }));
+            const results = await searcher.search('Other ID Book');
+            expect(results).toHaveLength(1);
+            // Line 240: isbn = isbn13?.identifier || isbn10?.identifier || identifiers[0]?.identifier || null
+            expect(results[0].isbn).toBe('978-1234567890');
+            vi.unstubAllGlobals();
+        });
+
         it('search deduplicates results across calls via foundBookIds', async () => {
             const searcher = new BookSearcher();
             // Pre-load the ID so it gets filtered on search return.
