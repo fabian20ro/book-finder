@@ -248,6 +248,15 @@ describe('dom helpers', () => {
             expect(result).toBeNull();
         });
 
+        it('returns null when called on root element — parent traversal terminates', () => {
+            // Anchors the while-loop termination path: starting element with no
+            // parentElement must exit the loop and return null rather than looping
+            // or throwing. Validates the "walk up until document root" contract.
+            const el = document.body; // parentElement is null in jsdom
+            const result = $closest(el, '.nonexistent');
+            expect(result).toBeNull();
+        });
+
         it('throws on malformed selector — never silently returns null', () => {
             // Validates the throwing contract: an invalid CSS selector propagates
             // from .matches() through $closest rather than being swallowed. This
