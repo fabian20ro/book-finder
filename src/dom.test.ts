@@ -18,8 +18,8 @@ describe('dom helpers', () => {
             expect(() => $('#nonexistent')).toThrow('Required DOM element not found: "#nonexistent"');
         });
 
-        it('throws DOMException for invalid CSS selector', () => {
-            expect(() => $('[')).toThrow(DOMException);
+        it('throws for any malformed selector instead of silently returning null', () => {
+            expect(() => $('[')).toThrow();
         });
     });
 
@@ -246,6 +246,15 @@ describe('dom helpers', () => {
             const el = document.querySelector('.only') as HTMLElement;
             const result = $closest(el, '.nonexistent');
             expect(result).toBeNull();
+        });
+
+        it('throws on malformed selector — never silently returns null', () => {
+            // Validates the throwing contract: an invalid CSS selector propagates
+            // from .matches() through $closest rather than being swallowed. This
+            // anchors failure-specific behavior for event-delegation callers.
+            document.body.innerHTML = '<div class="wrap"><span class="target">T</span></div>';
+            const target = document.querySelector('.target') as HTMLElement;
+            expect(() => $closest(target, '[')).toThrow(DOMException);
         });
     });
 });
