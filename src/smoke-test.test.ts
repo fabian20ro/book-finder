@@ -1,5 +1,5 @@
 import { expect, test, beforeEach } from 'vitest';
-import { getState, update, on, toast, addBook, removeBook, clearBooks, setView, addCandidates, removeCandidateById, clearCandidates, moveBook, type Book } from './state';
+import { getState, update, on, toast, addBook, removeBook, clearBooks, setView, addCandidates, removeCandidateById, clearAll, clearCandidates, moveBook, type Book } from './state';
 
 beforeEach(() => {
   // reset state fields to defaults — module-level state persists across tests
@@ -342,5 +342,39 @@ test('moveBook() emits change event', () => {
   emitted = false;
   moveBook(1, 0);
   expect(emitted).toBe(true);
+  off();
+});
+
+test('clearAll() empties books and candidates, resets filter, emits change', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'lib-book', title: 'Keeps', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addCandidates([{ id: 'cand-x', title: 'Cand', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+  update({ candidateFilter: 'some text' });
+
+  clearAll();
+
+  const state = getState();
+  expect(state.books).toHaveLength(0);
+  expect(state.candidateBooks).toHaveLength(0);
+  expect(state.candidateFilter).toBe('');
+  off();
+});
+
+test("setView() throws on invalid mode", () => {
+  expect(() => setView('scan' as any)).not.toThrow();
+  expect(() => setView('dashboard' as any)).toThrow(/Invalid view mode/);
+  expect(() => setView(undefined as any)).toThrow(/Invalid view mode/);
+});
+
+test("addCandidates() detects duplicates already in the library, does not insert", () => {
+  const off = on('change', () => {});
+  addBook({ id: 'lib-dup', title: 'Library Dup', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const before = getState().books.length + getState().candidateBooks.length;
+  addCandidates([{ id: 'lib-dup', title: 'Should not insert again', authors: ['Author'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+
+  expect(getState().books.length).toBe(1);
+  expect(getState().candidateBooks.length).toBe(0);
   off();
 });
