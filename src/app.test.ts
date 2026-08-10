@@ -710,4 +710,39 @@ describe('app', () => {
         // No persistence change — localStorage should still reflect zero books.
         expect(JSON.parse(localStorage.getItem('ftb-books') ?? '[]')).toHaveLength(0);
     });
+
+    it('rejects objects with missing required fields when restoring books', () => {
+        // normalizeStoredBook is internal — verify its behavior through the exported parseStoredBooks.
+        const restored = appModule.parseStoredBooks(JSON.stringify([{}]));
+
+        expect(restored).toHaveLength(0);
+    });
+
+    it('parseStoredBooks preserves valid books and rejects invalid ones in mixed arrays', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { id: 'valid-1', title: 'Valid Book 1' },
+            { id: null, title: 'Null ID' },
+            { id: 'valid-2', title: 'Valid Book 2' },
+            'not-an-object',
+        ]));
+
+        expect(restored).toHaveLength(2);
+        expect(restored[0].id).toBe('valid-1');
+        expect(restored[1].id).toBe('valid-2');
+    });
+
+    it('getLanguageUsage filters out unsupported language codes', () => {
+        localStorage.setItem('ftb-lang-usage', JSON.stringify({
+            eng: 5,
+            zzz: 999, // unsupported
+            ron: 10,
+        }));
+
+        const usage = appModule.getLanguageUsage();
+        expect(usage).toEqual({ eng: 5, ron: 10 });
+    });
+
+    it('getLanguageUsage returns empty object when localStorage is empty', () => {
+        expect(appModule.getLanguageUsage()).toEqual({});
+    });
 });
