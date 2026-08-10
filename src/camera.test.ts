@@ -374,7 +374,7 @@ describe('CameraManager', () => {
         });
     });
 
-    describe('withMetadataTimeout (via start)', () => {
+    describe('withMetadataTimeout', () => {
         it('resolves when the inner promise settles before timeout', async () => {
             // Override mock so srcObject setter resolves synchronously instead of via microtask.
             let srcObjVal: any = null;
@@ -420,30 +420,6 @@ describe('CameraManager', () => {
 
             // The withMetadataTimeout wrapper must reject with its timeout error message,
             // proving that the 5-second hang-prevention contract is enforced.
-            expect(result).toBeInstanceOf(Error);
-            expect((result as Error).message).toContain('Camera metadata not ready within');
-        });
-    });
-
-    describe('withMetadataTimeout', () => {
-        it('rejects with timeout message after ms elapsed', async () => {
-            Object.defineProperty(video, 'srcObject', {
-                get() { return null; },
-                set(_val: any) {},
-                configurable: true,
-            });
-            video.addEventListener = (() => {}) as typeof video.addEventListener;
-
-            vi.useFakeTimers();
-
-            const camera = new CameraManager(video, canvas);
-            const startPromise = camera.start().catch((err: unknown) => err);
-
-            // Advance timers past 5000ms to trigger the timeout rejection synchronously.
-            await vi.advanceTimersByTimeAsync(6000);
-
-            const result = await startPromise;
-
             expect(result).toBeInstanceOf(Error);
             expect((result as Error).message).toContain('Camera metadata not ready within');
         });
