@@ -18,8 +18,8 @@ describe('dom helpers', () => {
             expect(() => $('#nonexistent')).toThrow('Required DOM element not found: "#nonexistent"');
         });
 
-        it('throws for any malformed selector instead of silently returning null', () => {
-            expect(() => $('[')).toThrow();
+        it('throws DOMException for any malformed selector instead of silently returning null', () => {
+            expect(() => $('[')).toThrow(DOMException);
         });
     });
 
