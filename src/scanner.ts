@@ -196,8 +196,11 @@ function onVisibilityChange(
 export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSearcher): Promise<Book[]> {
     if (ocrLines.length === 0) return [];
 
-    // Clean the input lines: trim whitespace and remove empty strings
-    const texts = ocrLines.map((l) => l.text.trim()).filter((t) => t.length > 0);
+    // Clean the input lines: trim whitespace, collapse internal runs (OCR artifacts), and remove empty strings
+    function collapseWhitespace(s: string): string {
+        return s.replace(/\s+/g, ' ').trim();
+    }
+    const texts = ocrLines.map((l) => collapseWhitespace(l.text)).filter((t) => t.length > 0);
     if (texts.length === 0) return [];
 
     update({ lastDetectedText: texts[0] });
