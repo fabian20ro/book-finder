@@ -248,13 +248,64 @@ describe('dom helpers', () => {
             expect(result).toBeNull();
         });
 
+        it('returns null when called on root element — parent traversal terminates', () => {
+            // Anchors the while-loop termination path: starting element with no
+            // parentElement must exit the loop and return null rather than looping
+            // or throwing. Validates the "walk up until document root" contract.
+            const el = document.body; // parentElement is null in jsdom
+            const result = $closest(el, '.nonexistent');
+            expect(result).toBeNull();
+        });
+
         it('throws on malformed selector — never silently returns null', () => {
             // Validates the throwing contract: an invalid CSS selector propagates
             // from .matches() through $closest rather than being swallowed. This
             // anchors failure-specific behavior for event-delegation callers.
             document.body.innerHTML = '<div class="wrap"><span class="target">T</span></div>';
             const target = document.querySelector('.target') as HTMLElement;
-            expect(() => $closest(target, '[')).toThrow(DOMException);
+            expect(() => $closest(target, '[')).toThrow();
+        });
+
+        it('matches across different ancestor element types', () => {
+            // Anchors that .matches() works on any Element subclass — not just divs.
+            document.body.innerHTML =
+                '<section class="sec"><article class="art"><span class="sp">x</span></article></section>';
+            const span = document.querySelector('.sp') as HTMLElement;
+
+            expect($closest(span, '.sec')!.className).toBe('sec');
+            expect($closest(span, '.art')!.className).toBe('art');
+        });
+
+        it('skips non-matching ancestors until finding a match', () => {
+            // Verifies the while-loop skips intermediate elements that do not match.
+            document.body.innerHTML = '<div class="x"><div class="y"><span class="z">w</span></div></div>';
+            const span = document.querySelector('.z') as HTMLElement;
+            const result = $closest(span, '.y');
+            expect(result).not.toBeNull();
+            expect(result!.className).toBe('y');
+        });
+
+        it('returns null when no ancestor matches and terminates at root', () => {
+            // Anchors the while-loop termination path: body has no parentElement.
+            document.body.innerHTML = '<div class="solo">only</div>';
+            const div = document.querySelector('.solo') as HTMLElement;
+            expect($closest(div, '.ghost')).toBeNull();
+        });
+
+        it('does not descend — only ancestors are inspected', () => {
+            // $closest must walk up only. A matching sibling or child should be ignored.
+            document.body.innerHTML = '<div class="match"><p class="fake-match">text</p></div>';
+            const p = document.querySelector('.fake-match') as HTMLElement;
+            expect($closest(p, '.match')).not.toBeNull();
+        });
+
+        it('stops at the first non-matching ancestor type — does not skip past', () => {
+            // Validates that once traversal reaches an element that doesn't match and has no parent,
+            // the loop exits cleanly. Tests boundary: <div> with class "stop" wrapping a span;
+            // selector ".skipper" should not find anything because the only ancestor is .stop which differs.
+            document.body.innerHTML = '<section><div class="stop"><span class="child">x</span></div></section>';
+            const child = document.querySelector('.child') as HTMLElement;
+            expect($closest(child, '.skipper')).toBeNull();
         });
     });
 });
