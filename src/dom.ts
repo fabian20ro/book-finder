@@ -18,7 +18,8 @@ export function trySelector(selectors: string[]): HTMLElement | null {
         try {
             const el = document.querySelector(sel);
             if (el) return el as HTMLElement;
-        } catch (_err) {
+        } catch (err) {
+            if (!(err instanceof SyntaxError) && !(err instanceof DOMException)) throw err;
             // Malformed CSS selector — skip and continue to next.
         }
     }
