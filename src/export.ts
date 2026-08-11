@@ -44,6 +44,11 @@ export async function shareBooks(books: Book[], notify: (msg: string) => void): 
         }
     }
 
+    if (!navigator.clipboard) {
+        notify(`Could not share automatically. Here is your book list:\\n\\n${text}\\nCopy it from above.`);
+        return;
+    }
+
     try {
         await navigator.clipboard.writeText(text);
         notify('Book list copied to clipboard');

@@ -7,6 +7,9 @@ export class CameraManager {
     private stream: MediaStream | null = null;
 
     constructor(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement) {
+        if (!videoElement || !canvasElement) {
+            throw new Error('Camera requires valid video and canvas elements');
+        }
         this.video = videoElement;
         this.canvas = canvasElement;
         this.ctx = getContext2D(canvasElement);
