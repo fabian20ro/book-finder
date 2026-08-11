@@ -489,6 +489,24 @@ describe('app', () => {
         expect(resumeAutoScan).toHaveBeenCalledOnce();
     });
 
+    it('shows a "start camera first" toast when auto-scan is toggled on without camera active', async () => {
+        let emittedMessage = '';
+        const { on } = await import('./state');
+        on('toast', (msg: string) => { emittedMessage = msg; });
+
+        capturedHandlers.onAutoScanToggle();
+
+        expect(emittedMessage).toBe('Start the camera first to use auto-scan');
+    });
+
+    it('does not call resumeAutoScan when toggling auto-scan on without camera active', async () => {
+        const { resumeAutoScan } = await import('./scanner');
+        vi.clearAllMocks();
+        capturedHandlers.onAutoScanToggle();
+
+        expect(resumeAutoScan).not.toHaveBeenCalled();
+    });
+
     it('calls pauseAutoScan when auto-scan is toggled off with camera active', async () => {
         const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
         await capturedHandlers.onStartCamera();
