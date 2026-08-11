@@ -378,3 +378,40 @@ test("addCandidates() detects duplicates already in the library, does not insert
   expect(getState().candidateBooks.length).toBe(0);
   off();
 });
+
+test('addCandidates() emits no change event when all inputs are duplicates of existing candidates', () => {
+  let count = 0;
+  const off = on('change', () => { count++; });
+
+  addCandidates([{ id: 'cand-dup-1', title: 'Cand A', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+  // reset count — the initial addCandidates above emits once; that is the baseline
+  count = 0;
+
+  // pass a duplicate already in candidates AND an entirely new candidate
+  addCandidates([
+    { id: 'cand-dup-1', title: 'Duplicate of existing candidate', authors: ['Dup'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 },
+    { id: 'cand-new', title: 'New Candidate', authors: ['N'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 },
+  ]);
+
+  // only the new candidate should be inserted; emit fired once for the real insertion
+  expect(count).toBe(1);
+  const state = getState();
+  expect(state.candidateBooks.map((b) => b.id)).toEqual(['cand-dup-1', 'cand-new']);
+  off();
+});
+
+test('addCandidates() emits no change event when every input is already in either list', () => {
+  let count = 0;
+  const off = on('change', () => { count++; });
+
+  addBook({ id: 'shared-id', title: 'In Library', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  count = 0; // reset baseline
+
+  addCandidates([{ id: 'shared-id', title: 'Should not re-insert', authors: ['Author'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+
+  expect(count).toBe(0);
+  const state = getState();
+  expect(state.books.length).toBe(1);
+  expect(state.candidateBooks.length).toBe(0);
+  off();
+});
