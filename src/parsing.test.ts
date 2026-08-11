@@ -468,6 +468,21 @@ describe('parsing stored books', () => {
         expect(result).toHaveLength(0);
     });
 
+    it('rejects sub-arrays as items within the outer array', () => {
+        // normalizeStoredBook checks typeof value !== 'object' — but arrays are objects in JS.
+        // Items that are themselves arrays must be rejected because [].id is undefined,
+        // which fails the string-id check downstream.
+        const json = JSON.stringify([
+            [],                         // empty sub-array → no .id property
+            [{ id: 'nested' }],         // array containing an object → .id on outer array is undefined
+            42,                         // primitive — also rejected but confirms mixed rejection
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(0);
+    });
+
     it('rejects entry with valid title but non-string id (trim check)', () => {
         const json = JSON.stringify([
             // id is a number — typeof !== 'string' → rejected before trim
