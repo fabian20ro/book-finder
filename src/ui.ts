@@ -445,9 +445,9 @@ function renderLanguageSelector(): void {
 
     for (const lang of visible) {
         const isActive = lang.code === state.ocrLanguage;
-        html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" aria-pressed="${isActive}" data-lang="${lang.code}" title="${lang.name}" aria-label="OCR language: ${lang.name}"${disabled ? ' disabled' : ''}>
-            <span class="lang-flag">${lang.flag}</span>
-            <span class="lang-label">${lang.name}</span>
+        html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" aria-pressed="${isActive}" data-lang="${lang.code}" title="${escapeHtml(lang.name)}" aria-label="OCR language: ${escapeHtml(lang.name)}"${disabled ? ' disabled' : ''}>
+            <span class="lang-flag">${escapeHtml(lang.flag)}</span>
+            <span class="lang-label">${escapeHtml(lang.name)}</span>
         </button>`;
     }
 
