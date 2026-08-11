@@ -94,7 +94,7 @@ export function queryMatchRatio(
  * Scoring breakdown:
  * Metadata (up to 50): title 10, authors 10, ISBN 10, thumbnail 5,
  *     description 5, publisher 5, publishedDate 5
- *   Query match (up to 30): ratio of query words found in title+authors+isbn
+ *   Query match (up to 30): ratio of query words found in title+authors
  *   Ratings (up to 20): averageRating contributes up to 12,
  *     ratingsCount contributes up to 8
  * */

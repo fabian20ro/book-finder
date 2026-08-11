@@ -611,15 +611,6 @@ describe('scanner', () => {
             expect(books.search).not.toHaveBeenCalledWith('abcdefg'); // excluded (< 8)
         });
 
-        it('sends only the combined query when all lines are shorter than 8 characters', async () => {
-            const book1 = makeBook('b1', 'Book One');
-            const books = createMockBookSearcher();
-            await searchTextBlocks(toOcrLines(['ab', 'cd', 'ef']), books as any);
-
-            expect(books.search).toHaveBeenCalledTimes(1);
-            expect(books.search).toHaveBeenCalledWith('ab cd ef');
-        });
-
         it('includes all lines in combined query even when all individuals are too short', async () => {
             const book1 = makeBook('b1', 'Book One');
             const books = createMockBookSearcher();
