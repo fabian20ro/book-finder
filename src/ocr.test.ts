@@ -450,6 +450,7 @@ describe('TextRecognizer', () => {
                         { text: '  Hello World  ', confidence: 90 },
                         { text: 'Another Line', confidence: 80 },
                         { text: 'AB', confidence: 95 },
+                        { text: 'Low Conf', confidence: 35 },
                     ],
                 },
             });
