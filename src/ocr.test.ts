@@ -842,11 +842,10 @@ describe('preprocessCanvas', () => {
             expect(brightness).toBe(0);
         });
 
-        it('returns 0 (not NaN) when no pixels are sampled', () => {
+        it('returns 0 when no pixels are sampled on an empty canvas (vitest-canvas-mock edge case)', () => {
             // A canvas with zero pixel area produces no samples; count stays 0,
-            // so `sum / count` would be NaN. The function must handle this edge case
-            // without crashing — here it returns 0 from the context fallback or
-            // the loop never runs and the implementation degrades gracefully.
+            // but vitest-canvas-mock returns a zero-length ImageData for getImageData(0, 0, 0, 0)
+            // on an empty canvas. The function must handle this edge case without producing NaN.
             const emptyCanvas = document.createElement('canvas');
 
             const brightness = frameBrightness(emptyCanvas);
