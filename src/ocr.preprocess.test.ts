@@ -144,6 +144,25 @@ describe('preprocessCanvas', () => {
         }
     });
 
+    it('should preserve dimensions on a non-square canvas', () => {
+        // Confirm preprocessCanvas creates a new canvas matching the input's width/height,
+        // not just square canvases. This catches regressions where someone hardcodes or
+        // truncates dimension handling to squares.
+        canvas.width = 6;
+        canvas.height = 2;
+
+        const result = preprocessCanvas(canvas);
+
+        expect(result).not.toBe(canvas);
+        expect(result.width).toBe(6);
+        expect(result.height).toBe(2);
+        const data = result.getContext('2d')?.getImageData(0, 0, 6, 2).data!;
+        // Grayscale of uniform input: each pixel should equal its grayscale value.
+        for (let i = 0; i < data.length; i += 4) {
+            expect(data[i]).toBe(mockCtx.data[i]);
+        }
+    });
+
     it('should return the original canvas unchanged when getContext returns null', () => {
         // preprocessCanvas's fallback: if no 2D context is available, pass through the input.
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
