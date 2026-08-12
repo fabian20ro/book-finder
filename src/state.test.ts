@@ -207,6 +207,14 @@ describe('state', () => {
             expect(getState().books).toHaveLength(1);
         });
 
+        it('rejects null, undefined, and non-object inputs', () => {
+            expect(addBook(null as any)).toBe(false);
+            expect(addBook(undefined as any)).toBe(false);
+            expect(addBook('string' as any)).toBe(false);
+            expect(addBook(42 as any)).toBe(false);
+            expect(getState().books).toHaveLength(0);
+        });
+
         it('allows different books', () => {
             addBook(makeBook({ id: 'a' }));
             addBook(makeBook({ id: 'b' }));
