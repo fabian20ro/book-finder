@@ -300,6 +300,11 @@ async function handleImageUpload(file: File): Promise<void> {
             return;
         }
 
+        if (!file.type.startsWith('image/')) {
+            toast('Only image files are supported.');
+            return;
+        }
+
         if (!getState().ocrReady) {
             toast('Scanner is still loading, please wait...');
             await waitForOcrReady();
