@@ -247,6 +247,17 @@ describe('shareBooks', () => {
         });
     });
 
+    it('returns without notifying on successful share', async () => {
+        const shareFn = vi.fn().mockResolvedValue(undefined);
+        const writeText = vi.fn();
+        vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
+
+        await shareBooks([makeBook()], notify);
+        expect(shareFn).toHaveBeenCalled();
+        expect(notify).not.toHaveBeenCalled();
+        expect(writeText).not.toHaveBeenCalled();
+    });
+
     it('falls back to clipboard when share is not available', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
