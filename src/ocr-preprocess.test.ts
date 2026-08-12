@@ -309,6 +309,30 @@ describe('ocr utilities', () => {
                 expect(resultData[i4 + 1]).toBe(resultData[i4 + 2]); // G === B
             }
         });
+
+        it('computes exact luminance values via the integer formula for pure-color inputs', () => {
+            // The grayscale conversion uses: round((77*R + 150*G + 29*B) / 256).
+            // With a single-pixel canvas, min===max so contrast stretch is a no-op (range=0 branch),
+            // and strength=0 disables sharpening. Output pixel should equal the formula exactly.
+            const testCases: Array<{ r: number; g: number; b: number; expected: number }> = [
+                { r: 255, g: 0,   b: 0,   expected: 77 },  // (77*255)/256 ≈ 76.7 → 77
+                { r: 0,   g: 255, b: 0,   expected: 149 }, // (150*255)/256 ≈ 149.4 → 149
+                { r: 0,   g: 0,   b: 255, expected: 29 },  // (29*255)/256 ≈ 28.9 → 29
+            ];
+            for (const tc of testCases) {
+                const c = document.createElement('canvas');
+                c.width = 1;
+                c.height = 1;
+                mockCtx.putImageData(new ImageData(
+                    new Uint8ClampedArray([tc.r, tc.g, tc.b, 255]), 1, 1));
+
+                const result = preprocessCanvas(c, 0);
+                const rd = result.getContext('2d')!.getImageData(0, 0, 1, 1).data;
+                expect(rd[0]).toBe(tc.expected);
+                expect(rd[1]).toBe(tc.expected);
+                expect(rd[2]).toBe(tc.expected);
+            }
+        });
     });
 
     describe('frameBrightness', () => {
