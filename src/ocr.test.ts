@@ -647,6 +647,23 @@ describe('TextRecognizer', () => {
             // The first call should reject, but the finally block must reset isProcessing.
             await expect(recognizer.recognize(canvas)).rejects.toThrow('transient ocr failure');
             expect((recognizer as any).isProcessing).toBe(false);
+        });
+
+        it('resets isProcessing when Tesseract returns a result without data (structural glitch)', async () => {
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({}), // no `data` field — triggers "invalid result" path
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // The production code throws at line 219-221 when result.data is falsy.
+            // The finally block must still run and reset isProcessing so subsequent scans are not blocked.
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('Tesseract recognition returned invalid result');
+            expect((recognizer as any).isProcessing).toBe(false);
 
             // A subsequent call should proceed normally (not be silently dropped by the busy-guard).
             mockWorker.recognize.mockResolvedValue({ data: { lines: [] } });
