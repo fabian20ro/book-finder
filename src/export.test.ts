@@ -103,6 +103,26 @@ describe('exportToCsv', () => {
         await expect(capturedBlob!.text()).resolves.toContain('"Title, with comma"');
     });
 
+    it('quotes publisher field when it contains commas', async () => {
+        exportToCsv([makeBook({ publisher: 'Pub, Inc.' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split(/\r?\n/);
+        // header + one data row — publisher with comma must be quoted in CSV cell
+        expect(lines[1]).toContain('"Pub, Inc."');
+    });
+
+    it('escapes double quotes in ISBN field', async () => {
+        exportToCsv([makeBook({ isbn: '978-0-"Test"-ABC' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split(/\r?\n/);
+        // ISBN is the 3rd column — must appear escaped with doubled quotes
+        expect(lines[1]).toContain('978-0-"\"Test\""');
+    });
+
     it('revokes object URL after download', () => {
         exportToCsv([makeBook()]);
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
@@ -308,6 +328,16 @@ describe('shareBooks', () => {
         await shareBooks([makeBook()], notify);
         expect(writeText).not.toHaveBeenCalled();
         expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('falls back to clipboard when share throws a non-Error value', async () => {
+        const shareFn = vi.fn().mockRejectedValue('share failed');
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
+
+        await shareBooks([makeBook()], notify);
+        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
     });
 
     it('notifies when neither share nor clipboard is available', async () => {

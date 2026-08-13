@@ -495,4 +495,45 @@ describe('parsing stored books', () => {
 
         expect(result).toHaveLength(0);
     });
+
+    it('handles omitted optional fields with correct defaults', () => {
+        const json = JSON.stringify([
+            { id: 'minimal-book', title: 'Minimal Book' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        // All optional string fields default to null when omitted
+        expect(result[0].authors).toEqual([]);
+        expect(result[0].publisher).toBe(null);
+        expect(result[0].publishedDate).toBe(null);
+        expect(result[0].description).toBe(null);
+        expect(result[0].isbn).toBe(null);
+        expect(result[0].pageCount).toBe(null);
+        expect(result[0].thumbnailUrl).toBe(null);
+        expect(result[0].infoLink).toBe(null);
+        // confidence defaults to 0 when omitted (null → ?? 0)
+        expect(result[0].confidence).toBe(0);
+    });
+
+    it('handles books with some optional fields present and others omitted', () => {
+        const json = JSON.stringify([
+            { id: 'partial-book', title: 'Partial Book', publisher: 'Some Press' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].publisher).toBe('Some Press');
+        // Unset optional fields default to null/empty
+        expect(result[0].authors).toEqual([]);
+        expect(result[0].publishedDate).toBe(null);
+        expect(result[0].description).toBe(null);
+        expect(result[0].isbn).toBe(null);
+        expect(result[0].pageCount).toBe(null);
+        expect(result[0].thumbnailUrl).toBe(null);
+        expect(result[0].infoLink).toBe(null);
+        expect(result[0].confidence).toBe(0);
+    });
 });

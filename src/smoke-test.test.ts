@@ -379,6 +379,38 @@ test("addCandidates() detects duplicates already in the library, does not insert
   off();
 });
 
+test('removeBook() with out-of-bounds index returns null and does not emit change', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  addBook({ id: 'keep', title: 'Keep Me', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  emitted = false; // clear baseline set by addBook's own emit
+
+  expect(removeBook(-1)).toBeNull();
+  expect(emitted).toBe(false);
+  expect(getState().books).toHaveLength(1);
+
+  expect(removeBook(99)).toBeNull();
+  expect(emitted).toBe(false);
+  expect(getState().books).toHaveLength(1);
+
+  off();
+});
+
+test('addCandidates() ignores candidates already present in the library list', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'already-lib', title: 'In Library Already', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const beforeLib = getState().books.length;
+  addCandidates([{ id: 'already-lib', title: 'Should be ignored', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }, { id: 'new-one', title: 'New Entry', authors: ['N'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+
+  expect(getState().books.length).toBe(beforeLib); // library untouched
+  const state = getState();
+  expect(state.candidateBooks.map((b) => b.id)).toEqual(['new-one']);
+  off();
+});
+
 test('addCandidates() emits no change event when all inputs are duplicates of existing candidates', () => {
   let count = 0;
   const off = on('change', () => { count++; });
