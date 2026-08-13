@@ -536,4 +536,36 @@ describe('parsing stored books', () => {
         expect(result[0].infoLink).toBe(null);
         expect(result[0].confidence).toBe(0);
     });
+
+    it('silently ignores unknown extra fields in book objects', () => {
+        const json = JSON.stringify([
+            {
+                id: 'extra-fields',
+                title: 'Extra Fields Book',
+                publisher: 'Test Press',
+                // Unknown keys that normalizeStoredBook does not extract
+                __proto__: null,
+                foo: 'bar',
+                nested: { deep: true },
+                deletedAt: 1700000000000,
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('extra-fields');
+        // Only defined Book fields are present — extra keys must not leak through
+        expect(Object.keys(result[0])).toEqual([
+            'id', 'title', 'authors', 'publisher', 'publishedDate',
+            'description', 'isbn', 'pageCount', 'thumbnailUrl',
+            'infoLink', 'confidence',
+        ]);
+    });
+
+    it('returns empty array for whitespace-only input strings', () => {
+        expect(parseStoredBooks('   ')).toEqual([]);
+        expect(parseStoredBooks('\t\n\r')).toEqual([]);
+        expect(parseStoredBooks('')).toEqual([]);
+    });
 });
