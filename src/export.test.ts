@@ -103,6 +103,26 @@ describe('exportToCsv', () => {
         await expect(capturedBlob!.text()).resolves.toContain('"Title, with comma"');
     });
 
+    it('quotes publisher field when it contains commas', async () => {
+        exportToCsv([makeBook({ publisher: 'Pub, Inc.' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split(/\r?\n/);
+        // header + one data row — publisher with comma must be quoted in CSV cell
+        expect(lines[1]).toContain('"Pub, Inc."');
+    });
+
+    it('escapes double quotes in ISBN field', async () => {
+        exportToCsv([makeBook({ isbn: '978-0-"Test"-ABC' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split(/\r?\n/);
+        // ISBN is the 3rd column — must appear escaped with doubled quotes
+        expect(lines[1]).toContain('978-0-"\"Test\""');
+    });
+
     it('revokes object URL after download', () => {
         exportToCsv([makeBook()]);
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
