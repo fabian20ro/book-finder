@@ -364,6 +364,18 @@ describe('scanner', () => {
             expect(camera.captureFrame).toHaveBeenCalled();
         });
 
+        it('toasts "No new books found" when OCR returns text but search yields none', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['Some text']);
+            const books = createMockBookSearcher([]); // no results
+
+            startScanning(camera as any, ocr as any, books as any);
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(state.toast).toHaveBeenCalledWith('No new books found');
+        });
+
         it('does nothing when not scanning', () => {
             const camera = createMockCamera();
             state.update({ autoScan: true, isScanning: false });
