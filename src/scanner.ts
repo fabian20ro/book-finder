@@ -222,10 +222,16 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
     const dedupedQueries = [...querySet].slice(0, MAX_QUERIES_PER_SCAN);
 
     const allNewBooks: Book[] = [];
+    const seenIds = new Set<string>();
     for (const query of dedupedQueries) {
         try {
             const results = await bookSearcher.search(query);
-            allNewBooks.push(...results);
+            for (const book of results) {
+                if (!seenIds.has(book.id)) {
+                    seenIds.add(book.id);
+                    allNewBooks.push(book);
+                }
+            }
         } catch (err) {
             console.error(`Search failed for query "${query}":`, err);
             toast(`Search error for "${query}": ${err instanceof Error ? err.message : 'Unknown error'}`);
