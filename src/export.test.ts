@@ -330,6 +330,16 @@ describe('shareBooks', () => {
         expect(notify).not.toHaveBeenCalled();
     });
 
+    it('falls back to clipboard when share throws a non-Error value', async () => {
+        const shareFn = vi.fn().mockRejectedValue('share failed');
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
+
+        await shareBooks([makeBook()], notify);
+        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
+    });
+
     it('notifies when neither share nor clipboard is available', async () => {
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: undefined });
 
