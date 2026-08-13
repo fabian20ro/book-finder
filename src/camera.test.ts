@@ -465,8 +465,14 @@ describe('CameraManager', () => {
             await expect(camera.verifyReadiness()).resolves.not.toThrow();
         });
 
-        it('throws when stream is not active', async () => {
+        it('throws when stream becomes inactive after start (e.g. after stop)', async () => {
             const camera = new CameraManager(video, canvas);
+            await camera.start();
+            expect(camera.isActive).toBe(true);
+            // Stop the camera — this nulls `this.stream` in production (line 89-90 of camera.ts),
+            // so verifyReadiness() at line 75 must reject with the "not active" message.
+            camera.stop();
+            expect(camera.isActive).toBe(false);
             await expect(camera.verifyReadiness()).rejects.toThrow('Camera stream is not active.');
         });
 

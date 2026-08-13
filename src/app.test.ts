@@ -508,6 +508,22 @@ describe('app', () => {
     });
 
     it('calls pauseAutoScan when auto-scan is toggled off with camera active', async () => {
+        const { pauseAutoScan } = await import('./scanner');
+        let emittedMessage = '';
+        const { on } = await import('./state');
+        on('toast', (msg: string) => { emittedMessage = msg; });
+
+        await capturedHandlers.onStartCamera();
+        capturedHandlers.onAutoScanToggle(); // turn ON first so state is true
+        capturedHandlers.onAutoScanToggle(); // then OFF
+
+        expect(pauseAutoScan).toHaveBeenCalledOnce();
+        expect(getState().autoScan).toBe(false);
+        expect(localStorage.getItem('ftb-autoscan')).toBe('false');
+        expect(emittedMessage).toBe('Auto-scan paused');
+    });
+
+    it('calls pauseAutoScan when auto-scan is toggled off with camera active', async () => {
         const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
         await capturedHandlers.onStartCamera();
         capturedHandlers.onAutoScanToggle(); // turn on

@@ -215,6 +215,12 @@ export class TextRecognizer {
 
         try {
             const processed = preprocessCanvas(canvas);
+
+            // Skip Tesseract entirely on dark/unusable frames to avoid wasted cycles — only when opted in via config.
+            if (this.options.minFrameBrightness !== undefined && frameBrightness(processed) < this.options.minFrameBrightness) {
+                return [];
+            }
+
             const result = await this.worker.recognize(processed);
             if (!result || !result.data) {
                 throw new Error('Tesseract recognition returned invalid result');
