@@ -447,3 +447,34 @@ test('addCandidates() emits no change event when every input is already in eithe
   expect(state.candidateBooks.length).toBe(0);
   off();
 });
+
+test('addCandidates([]) does not emit change event and leaves state unchanged', () => {
+  let count = 0;
+  const off = on('change', () => { count++; });
+
+  addBook({ id: 'existing-book', title: 'Should Stay', authors: ['Author'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  const beforeState = getState();
+  count = 0; // reset baseline — addBook above emitted one event
+
+  addCandidates([]);
+
+  expect(count).toBe(0); // no event emitted for empty array
+  expect(getState().candidateBooks).toEqual(beforeState.candidateBooks);
+  expect(getState().books).toEqual(beforeState.books);
+  off();
+});
+
+test('addBook() rejects null, undefined, and non-object arguments', () => {
+  expect(addBook(null as any)).toBe(false);
+  expect(addBook(undefined as any)).toBe(false);
+  expect(addBook(123 as any)).toBe(false);
+  expect(addBook('string' as any)).toBe(false);
+
+  const beforeState = getState();
+  addBook(null as any);
+  addBook(undefined as any);
+  addBook(456 as any);
+
+  // State should remain unchanged
+  expect(getState().books).toEqual(beforeState.books);
+});
