@@ -688,6 +688,73 @@ describe('TextRecognizer', () => {
 
             await expect(recognizer.recognize(canvas)).rejects.toThrow('Tesseract recognition returned invalid result');
         });
+
+        it('skips Tesseract entirely when processed frame brightness is below minFrameBrightness', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Build a very dark canvas (grayscale 10/255) — frameBrightness samples these and returns ~10,
+            // well below DEFAULT_MIN_FRAME_BRIGHTNESS=30. preprocessCanvas will return a processed but still-dark result;
+            // the brightness check then short-circuits recognize() before Tesseract is invoked.
+            const darkCanvas = document.createElement('canvas');
+            darkCanvas.width = 5;
+            darkCanvas.height = 5;
+            const dCtx = darkCanvas.getContext('2d')!;
+            const darkData = new Uint8ClampedArray(5 * 5 * 4);
+            for (let i = 0; i < darkData.length; i += 4) {
+                darkData[i] = 10;     // R
+                darkData[i + 1] = 10; // G
+                darkData[i + 2] = 10; // B
+                darkData[i + 3] = 255;// A
+            }
+            dCtx.putImageData({ data: new Uint8ClampedArray(darkData), width: 5, height: 5, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron', { minFrameBrightness: 30 });
+
+            const results = await recognizer.recognize(darkCanvas);
+
+            expect(results).toEqual([]);
+            expect(mockWorker.recognize).not.toHaveBeenCalled();
+        });
+
+        it('invokes Tesseract when processed frame brightness meets minFrameBrightness threshold', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Build a bright canvas — frameBrightness will return ~200, above the threshold of 30.
+            const brightCanvas = document.createElement('canvas');
+            brightCanvas.width = 5;
+            brightCanvas.height = 5;
+            const bCtx = brightCanvas.getContext('2d')!;
+            const brightData = new Uint8ClampedArray(5 * 5 * 4);
+            for (let i = 0; i < brightData.length; i += 4) {
+                brightData[i] = 200;     // R
+                brightData[i + 1] = 200; // G
+                brightData[i + 2] = 200; // B
+                brightData[i + 3] = 255; // A
+            }
+            bCtx.putImageData({ data: new Uint8ClampedArray(brightData), width: 5, height: 5, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            mockRecognize.mockResolvedValue({ data: { lines: [{ text: 'Test', confidence: 80 }] } });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron', { minFrameBrightness: 30 });
+
+            const results = await recognizer.recognize(brightCanvas);
+
+            expect(mockWorker.recognize).toHaveBeenCalledOnce();
+            expect(results).toEqual([{ text: 'Test', confidence: 80 }]);
+        });
     });
 });
 
