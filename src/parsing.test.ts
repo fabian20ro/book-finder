@@ -278,6 +278,22 @@ describe('parsing stored books', () => {
         expect(result[0].id).toBe('valid-one');
     });
 
+    it('rejects array-typed entries at the top level (typeof [] === "object")', () => {
+        // JavaScript quirk: arrays are objects, so typeof [] passes the object check.
+        // An actual [1, 2, 3] as a top-level entry must be rejected — its .id and .title
+        // properties are undefined, which fail string validation downstream.
+        const json = JSON.stringify([
+            ['one', 'two'],       // array entry — typeof is object but has no valid id/title
+            { id: 'real-book', title: 'Real Book' },
+            [10, 20, 30],         // another array entry — rejected for same reason
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('real-book');
+    });
+
     it('preserves insertion order across mixed primitives and valid objects in flatMap', () => {
         const json = JSON.stringify([
             // Primitives scattered among valid entries — all filtered out by normalizeStoredBook,
