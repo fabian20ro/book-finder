@@ -164,10 +164,16 @@ const MAX_CACHE_SIZE = 200;
 export class BookSearcher {
   private queryCache = new Set<string>();
   private foundBookIds = new Set<string>();
+  private _searchCount = 0;
   private notify: (message: string) => void;
 
   constructor(notify: (message: string) => void = () => {}) {
     this.notify = notify;
+  }
+
+  /** Total number of times `search()` has been called, including cache hits. */
+  get searchCount(): number {
+    return this._searchCount;
   }
 
   async search(query: string): Promise<Book[]> {
