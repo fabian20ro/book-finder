@@ -238,6 +238,21 @@ describe('formatBooksAsText', () => {
         const result = formatBooksAsText([makeBook({ isbn: null, pageCount: 0 })]);
         expect(result).toBe('# My Book Collection\nAuthor A - Test Book');
     });
+
+    it('formats mixed-field books without cross-book leakage', () => {
+        const bookNoIsbn = makeBook({ isbn: null, title: 'Plain' });
+        const bookWithIsbn = makeBook({ id: 'b2', title: 'Special', isbn: 'X-999' });
+        const result = formatBooksAsText([bookNoIsbn, bookWithIsbn]);
+
+        expect(result).toContain('# My Book Collection');
+        const lines = result.split('\n');
+        // line 1 (first book): no ISBN text since isbn is null
+        expect(lines[1]).not.toContain('ISBN:');
+        expect(lines[1]).toContain('Plain');
+        // line 2 (second book): includes ISBN since it has one
+        expect(lines[2]).toContain('ISBN: X-999');
+        expect(lines[2]).toContain('Special');
+    });
 });
 
 describe('shareBooks', () => {

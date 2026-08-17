@@ -226,6 +226,25 @@ describe('Book scoring logic', () => {
     expect(queryMatchRatio(book, '9780743276540')).toBe(1);
   });
 
+  it('queryMatchRatio counts a word matched across multiple fields only once', () => {
+    const book = { id: '1', title: 'Moby Dick', authors: ['Herman Melville'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+    // "moby" appears in the title and nowhere else — ratio = 1/2 (Dick doesn't match).
+    expect(queryMatchRatio(book, 'moby dick')).toBe(1);
+    // Word appearing in both title and authors must not double-count: only one match for queryWords length.
+    const bookDup = { id: '2', title: 'A B', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+    // splitAndMergeShort merges consecutive single-letter tokens ("a"+"b" → "ab"), so query "a" is filtered out entirely (single char) → ratio = 0.
+    expect(queryMatchRatio(bookDup, 'a')).toBe(0);
+  });
+
+  it('queryMatchRatio handles leading single-letter tokens in book text (splitAndMergeShort filter)', () => {
+    // splitAndMergeShort merges consecutive single-char tokens (e.g., "a"+"b" → "ab") but filters out lone single chars.
+    // A title like "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z" splits into all single letters,
+    // which after merge+filter leaves only the merged pair "ab" — ratio = 1/1 for query matching that same word.
+    const book = { id: '1', title: 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+    // Query "a b c d e f g h i j k l m n o p q r s t u v w x y z" — same splitAndMergeShort behavior → queryWords = ["ab"], bookWords = ["ab"] → ratio = 1.
+    expect(queryMatchRatio(book, 'a b c d e f g h i j k l m n o p q r s t u v w x y z')).toBe(1);
+  });
+
   it('queryMatchRatio matches query words against description text', () => {
     const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: 'A story about jazz and wealth', isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
     expect(queryMatchRatio(book, 'jazz wealth')).toBe(1);

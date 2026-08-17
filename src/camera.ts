@@ -111,7 +111,26 @@ export class CameraManager {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoInput = devices.some((d) => d.kind === 'videoinput');
-            return { hasVideoDevice: videoInput, canRequestPermission: true };
+
+            // Use the Permissions API to detect whether camera permission has been blocked.
+            // When the user previously denied access, query() returns 'denied' — we cannot
+            // ask again without a fresh user gesture. Without this check the app would always
+            // claim canRequestPermission=true and fail at start() with a confusing error.
+            let canRequestPermission = true;
+            try {
+                if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+                    const status = await navigator.permissions.query({ name: 'camera' as PermissionName });
+                    if (status.state === 'denied') {
+                        canRequestPermission = false;
+                    } else if ((status.state as string) === 'blocked') {
+                        canRequestPermission = false;
+                    }
+                }
+            } catch {
+                // Permissions API unavailable or unsupported — fall through, keep default.
+            }
+
+            return { hasVideoDevice: videoInput, canRequestPermission };
         } catch (err) {
             // enumerateDevices may reject in restricted contexts (e.g. iframe with camera permission denied).
             // Treat as "can request anyway" — getUserMedia will give the real answer.
