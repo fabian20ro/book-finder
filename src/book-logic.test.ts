@@ -657,6 +657,23 @@ describe('Book logic', () => {
             vi.unstubAllGlobals();
         });
 
+        it('search handles a successful response with no items field', async () => {
+            const notify = vi.fn();
+            const searcher = new BookSearcher(notify);
+            // Google Books can return 200 OK with an empty body — exercise the
+            // `data.items || []` guard at line 224 through the full search path.
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({}),
+            }));
+            const results = await searcher.search('no items test');
+            expect(results).toEqual([]);
+            // Query should still be cached to avoid repeated empty API calls.
+            expect((searcher as any).queryCache.has('no items test')).toBe(true);
+            expect(notify).not.toHaveBeenCalled();
+            vi.unstubAllGlobals();
+        });
+
         it('notify callback receives the constructor default empty function when no notify provided', () => {
             const searcher = new BookSearcher();
             // Default notify is () => {} — calling it must not throw.
