@@ -891,7 +891,49 @@ describe('queryMatchRatio', () => {
         )).toBeCloseTo(0.5);
     });
 
-    it('matches a single merged-initial query token against the same merged form in book metadata', () => {
+    it('matches words found only in description field', () => {
+        // Production code joins all metadata fields (title, authors, publisher, isbn,
+        // description, pageCount) into one searchable string. A word appearing solely
+        // in the description must still produce a positive match ratio.
+        expect(queryMatchRatio(
+            makeBookData({ title: 'Empty Title', description: 'A unique identifier xyz found inside' }),
+            'xyz',
+        )).toBe(1);
+
+        // When only some query words appear in description, ratio reflects partial match.
+        const score = queryMatchRatio(
+            makeBookData({ title: 'Great Gatsby', description: 'Found a rare copy of this book' }),
+            'rare copy',
+        );
+        expect(score).toBeGreaterThan(0);
+
+        // A word not present anywhere in any metadata field produces 0.
+        const noMatch = queryMatchRatio(
+            makeBookData({ title: 'Great Gatsby', description: 'Some other text here' }),
+            'zzznothereatall',
+        );
+        expect(noMatch).toBe(0);
+    });
+
+    it('matches words found only in publisher field', () => {
+        // Publisher is also part of the joined search text.
+        const score = queryMatchRatio(
+            makeBookData({ title: 'Empty Title', publisher: 'Penguin Random House' }),
+            'random house',
+        );
+        expect(score).toBeGreaterThan(0);
+    });
+
+    it('matches words found only in isbn field for numeric queries', () => {
+        // ISBN is included in the searchable text — a numeric query should match against it.
+        const score = queryMatchRatio(
+            makeBookData({ title: 'Nope Title', isbn: '9781234567890' }),
+            '9781234567890',
+        );
+        expect(score).toBe(1);
+    });
+
+    it('matches words found only in description field', () => {
         // Both sides produce ["jk"] after clean/split/merge/filter. Identical tokens → full ratio = 1.
         expect(queryMatchRatio(
             makeBookData({ authors: ['J.K. Rowling'] }),
