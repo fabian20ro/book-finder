@@ -344,6 +344,116 @@ describe('state', () => {
             expect(getState().books[0].id).toBe('b');
             expect(getState().books[1].id).toBe('a');
         });
+
+        it('preserves list order when from equals to (no-op invariant)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            moveBook(1, 1);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['A', 'B', 'C']);
+        });
+
+        it('does nothing for out-of-bounds indices (mutates nothing)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            const listener = vi.fn();
+            on('change', listener);
+
+            moveBook(-1, 0);
+            moveBook(0, 5);
+            expect(getState().books).toHaveLength(1);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('moves a book from one position to another (title order)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            moveBook(0, 2);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['B', 'C', 'A']);
+        });
+
+        it('moves an item past another (index shift during splice)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            moveBook(0, 2);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['B', 'C', 'A']);
+        });
+
+        it('removes a book from the middle of the list by moving to end then removing last', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            moveBook(1, 2);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['A', 'C', 'B']);
+
+            const removed = removeBook(2);
+            expect(removed!.title).toBe('B');
+            expect(getState().books).toHaveLength(2);
+        });
+
+        it('does nothing when toIndex is out of bounds (no mutation)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 5);
+            expect(getState().books).toHaveLength(2);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when fromIndex is negative (no mutation)', () => {
+            addBook(makeBook({ id: 'a' }));
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(-1, 0);
+            expect(getState().books).toHaveLength(1);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when toIndex is negative (no mutation)', () => {
+            addBook(makeBook({ id: 'a' }));
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, -1);
+            expect(getState().books).toHaveLength(1);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('preserves list when moving a single book to itself', () => {
+            addBook(makeBook({ id: 'solo' }));
+            moveBook(0, 0);
+            expect(getState().books).toHaveLength(1);
+            expect(getState().books[0].id).toBe('solo');
+        });
+
+        it('moves last item to first position (wrap-around)', () => {
+            addBook(makeBook({ id: 'a' }));
+            addBook(makeBook({ id: 'b' }));
+            addBook(makeBook({ id: 'c' }));
+
+            moveBook(2, 0);
+            const ids = getState().books.map((b) => b.id);
+            expect(ids).toEqual(['c', 'a', 'b']);
+        });
+
+        it('moves first item to last position (wrap-around)', () => {
+            addBook(makeBook({ id: 'x' }));
+            addBook(makeBook({ id: 'y' }));
+            addBook(makeBook({ id: 'z' }));
+
+            moveBook(0, 2);
+            const ids = getState().books.map((b) => b.id);
+            expect(ids).toEqual(['y', 'z', 'x']);
+        });
     });
 
     describe('clearBooks', () => {
