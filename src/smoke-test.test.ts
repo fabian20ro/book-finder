@@ -346,13 +346,16 @@ test('moveBook() emits change event', () => {
 });
 
 test('clearAll() empties books and candidates, resets filter, emits change', () => {
-  const off = on('change', () => {});
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
 
   addBook({ id: 'lib-book', title: 'Keeps', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
   addCandidates([{ id: 'cand-x', title: 'Cand', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
   update({ candidateFilter: 'some text' });
 
   clearAll();
+
+  expect(emitted).toBe(true);
 
   const state = getState();
   expect(state.books).toHaveLength(0);
