@@ -718,6 +718,39 @@ describe('state', () => {
             expect(listener).not.toHaveBeenCalled();
         });
 
+        it('throws TypeError for null input', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            const listener = vi.fn();
+            on('change', listener);
+            expect(() => addCandidates(null as any)).toThrow(TypeError);
+            expect(getState().candidateBooks).toHaveLength(1);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('throws TypeError for undefined input', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            expect(() => addCandidates(undefined as any)).toThrow(TypeError);
+            expect(getState().candidateBooks).toHaveLength(0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('throws TypeError for non-array input (number)', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            expect(() => addCandidates(42 as any)).toThrow(TypeError);
+            expect(getState().candidateBooks).toHaveLength(0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('throws TypeError for non-array input (string)', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            expect(() => addCandidates('string' as any)).toThrow(TypeError);
+            expect(getState().candidateBooks).toHaveLength(0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
         it('handles mixed new and duplicate entries in a single batch (cross-list dedup)', () => {
             addBook(makeBook({ id: 'in-books' }));
             addCandidates([makeBook({ id: 'c-new-1' })]);
