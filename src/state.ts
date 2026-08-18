@@ -18,7 +18,6 @@ export interface AppState {
     ocrReady: boolean;
     ocrLanguage: string;
     isChangingLanguage: boolean;
-    lastRemoved: { book: Book; index: number } | null;
 }
 
 // --- Typed event emitter ---
@@ -59,7 +58,6 @@ const state: AppState = {
     ocrReady: false,
     ocrLanguage: 'ron',
     isChangingLanguage: false,
-    lastRemoved: null,
 };
 
 export function getState(): Readonly<AppState> {
