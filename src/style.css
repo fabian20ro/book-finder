@@ -61,7 +61,7 @@ body {
 .home-actions {
     display: flex;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: max(24px, env(safe-area-inset-bottom));
 }
 
 .btn-action {
