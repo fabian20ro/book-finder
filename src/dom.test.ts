@@ -18,6 +18,13 @@ describe('dom helpers', () => {
             expect(() => $('#nonexistent')).toThrow('Required DOM element not found: "#nonexistent"');
         });
 
+        it('throws when selector is empty string — querySelector throws DOMException, no descriptive fallback', () => {
+            // In jsdom (and per CSS spec), document.querySelector('') throws a DOMException.
+            // Unlike malformed selectors in trySelector which are caught and skipped, $ propagates
+            // this raw DOMException without the "Required DOM element not found" message — observable contract.
+            expect(() => $('')).toThrow();
+        });
+
         it('throws DOMException for any malformed selector instead of silently returning null', () => {
             expect(() => $('[')).toThrow(DOMException);
         });
