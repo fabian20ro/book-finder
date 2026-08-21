@@ -150,6 +150,22 @@ describe('BookSearcher', () => {
             expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(Error));
         });
 
+        it('handles malformed JSON from response.json() gracefully', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse({}, 200).mockImplementation(() =>
+                Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: () => { throw new SyntaxError('Unexpected token <'); },
+                }),
+            ));
+
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const results = await searcher.search('malformed json');
+
+            expect(results).toEqual([]);
+            expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(SyntaxError));
+        });
+
         it('handles response with no items', async () => {
             vi.stubGlobal('fetch', mockFetchResponse({}));
             const results = await searcher.search('empty query');
