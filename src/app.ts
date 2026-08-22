@@ -202,13 +202,18 @@ function waitForOcrReady(): Promise<void> {
     });
 }
 
+const WAIT_FOR_OCR_TIMEOUT_MS = 15000;
+
 async function startCameraView(): Promise<void> {
     try {
         hideError();
 
         if (!getState().ocrReady) {
             toast('Preparing scanner, please wait...');
-            await waitForOcrReady();
+            await Promise.race([
+                waitForOcrReady(),
+                new Promise<never>((_resolve, reject) => setTimeout(() => reject(new Error('OCR initialization timed out')), WAIT_FOR_OCR_TIMEOUT_MS)),
+            ]);
         }
 
         const videoEl = getVideoElement();
