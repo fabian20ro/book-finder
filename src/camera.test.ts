@@ -450,6 +450,104 @@ describe('CameraManager', () => {
         });
     });
 
+    describe('requestCameraPermission', () => {
+        it('returns hasVideoDevice:true and canRequestPermission:true when video device found and permissions allowed', async () => {
+            // Stub navigator.permissions.query to simulate 'granted' state — the Permissions API is supported,
+            // so we mock it to return a controlled response rather than relying on jsdom's default.
+            const permissionStatus = { state: 'granted' as PermissionState };
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'videoinput', deviceId: 'cam1' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: { query: vi.fn().mockResolvedValue(permissionStatus) },
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: true });
+        });
+
+        it('returns hasVideoDevice:false when no videoinput devices exist', async () => {
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'audioinput' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: { query: vi.fn().mockResolvedValue({ state: 'granted' }) },
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: false, canRequestPermission: true });
+        });
+
+        it('returns canRequestPermission:false when permissions API reports denied', async () => {
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'videoinput' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: { query: vi.fn().mockResolvedValue({ state: 'denied' }) },
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: false });
+        });
+
+        it('returns canRequestPermission:false when permissions API reports blocked', async () => {
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'videoinput' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: { query: vi.fn().mockResolvedValue({ state: 'blocked' }) },
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: false });
+        });
+
+        it('returns safe defaults when enumerateDevices rejects', async () => {
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockRejectedValue(new Error('Access denied')),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: {},
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: false, canRequestPermission: true });
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                'Camera pre-flight check failed:',
+                expect.any(Error),
+            );
+        });
+    });
+
     describe('verifyReadiness', () => {
         it('rejects before start (no stream initialized)', async () => {
             const camera = new CameraManager(video, canvas);

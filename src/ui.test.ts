@@ -687,6 +687,40 @@ describe('ui', () => {
             expect(cards).toHaveLength(1);
         });
 
+        it('filters candidates when typing in search input (DOM → state)', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Alpha Book' }),
+                makeBook({ id: 'c2', title: 'Beta Book' }),
+                makeBook({ id: 'c3', title: 'Gamma Book' }),
+            ]);
+
+            const searchInput = document.getElementById('candidate-search') as HTMLInputElement;
+
+            searchInput.value = 'alpha';
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+            expect(document.querySelectorAll('.candidate-card')).toHaveLength(1);
+        });
+
+        it('clears filter when typing removes match in search input', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Alpha Book' }),
+                makeBook({ id: 'c2', title: 'Beta Book' }),
+            ]);
+
+            const searchInput = document.getElementById('candidate-search') as HTMLInputElement;
+
+            // First filter to one result
+            searchInput.value = 'alpha';
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            expect(document.querySelectorAll('.candidate-card')).toHaveLength(1);
+
+            // Then type something that clears the match
+            searchInput.value = 'xyz';
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            expect(document.querySelectorAll('.candidate-card')).toHaveLength(0);
+        });
+
         it('shows all candidates when filter is empty', () => {
             addCandidates([
                 makeBook({ id: 'c1', title: 'Book A' }),

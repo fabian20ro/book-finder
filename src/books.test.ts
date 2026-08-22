@@ -79,14 +79,17 @@ describe('BookSearcher', () => {
                 googleBooksResponse([volume('v1', 'Same Book')]),
             ));
 
-            const first = await searcher.search('query one');
+            const first = await searcher.search('query alpha');
             expect(first).toHaveLength(1);
+            expect(first[0].id).toBe('v1');
 
             vi.stubGlobal('fetch', mockFetchResponse(
                 googleBooksResponse([volume('v1', 'Same Book')]),
             ));
 
-            const second = await searcher.search('query two');
+            const second = await searcher.search('query beta');
+            // Second query is distinct (not cached) so it reaches the API,
+            // but foundBookIds filters the duplicate ID out.
             expect(second).toHaveLength(0);
         });
 

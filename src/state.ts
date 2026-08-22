@@ -64,6 +64,11 @@ export function getState(): Readonly<AppState> {
     return state;
 }
 
+/** Convenience selector returning only the current book list. */
+export function getBooks(): Book[] {
+    return state.books;
+}
+
 export function update(patch: Partial<AppState>): void {
     let changed = false;
     for (const key of Object.keys(patch)) {
