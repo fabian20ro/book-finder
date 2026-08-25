@@ -126,6 +126,7 @@ export function removeBook(index: number): Book | null {
 
 export function moveBook(fromIndex: number, toIndex: number): void {
     if (fromIndex === toIndex) return;
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return;
     if (fromIndex < 0 || fromIndex >= state.books.length) return;
     if (toIndex < 0 || toIndex >= state.books.length) return;
     const [book] = state.books.splice(fromIndex, 1);

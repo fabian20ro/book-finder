@@ -153,8 +153,23 @@ export class TextRecognizer {
         this.currentLang = lang;
         this.options = options;
         this.worker = await (Tesseract as any).createWorker(lang);
-        await (this as any).applyWhitelist(lang);
-        options.onSetLanguage?.(lang);
+        try {
+            await (this as any).applyWhitelist(lang);
+            options.onSetLanguage?.(lang);
+        } catch (e) {
+            // init must be atomic: if post-creation setup fails, no partially configured
+            // worker is left behind (mirrors setLanguage's rollback discipline).
+            const failedWorker = this.worker;
+            this.worker = null;
+            if (failedWorker) {
+                try {
+                    await failedWorker.terminate();
+                } catch {
+                    // Best effort cleanup only.
+                }
+            }
+            throw e;
+        }
     }
 
     async setLanguage(lang: string): Promise<void> {

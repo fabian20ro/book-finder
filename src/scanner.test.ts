@@ -499,6 +499,30 @@ describe('scanner', () => {
             expect(books.search).not.toHaveBeenCalled();
         });
 
+        it('collapses OCR whitespace artifacts in lines before searching', async () => {
+            const books = createMockBookSearcher();
+            // OCR artifacts: leading/trailing spaces, tab runs, newline runs
+            await searchTextBlocks(toOcrLines(['  The  Great\tGreat  Novel  ', 'line two']), books as any);
+
+            // combined query must use the collapsed form, not the raw OCR text
+            expect(books.search).toHaveBeenCalledWith('The Great Great Novel line two');
+            expect(books.search).not.toHaveBeenCalledWith('  The  Great\tGreat  Novel  line two');
+            // collapsed first line becomes lastDetectedText
+            expect(state.getState().lastDetectedText).toBe('The Great Great Novel');
+            // collapsed first line (19 chars) qualifies as individual query
+            expect(books.search).toHaveBeenCalledWith('The Great Great Novel');
+        });
+
+        it('drops internal whitespace-only lines while keeping surviving lines', async () => {
+            const books = createMockBookSearcher();
+            await searchTextBlocks(toOcrLines(['first line', '\t  \n', 'second line']), books as any);
+
+            // blank middle line removed → combined uses only the two real lines
+            expect(books.search).toHaveBeenCalledWith('first line second line');
+            expect(books.search).toHaveBeenCalledTimes(3); // combined + 2 individuals
+            expect(state.getState().lastDetectedText).toBe('first line');
+        });
+
         it('updates lastDetectedText only once with first block', async () => {
             const books = createMockBookSearcher();
             await searchTextBlocks(toOcrLines(['first', 'second', 'third']), books as any);
