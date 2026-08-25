@@ -66,13 +66,18 @@ describe('exportToCsv', () => {
         expect(capturedBlob!.type).toBe('text/csv;charset=utf-8;');
     });
 
-    it('creates CSV with multiple books', () => {
+    it('creates CSV with multiple books', async () => {
         const books = [
             makeBook({ title: 'Book One', isbn: '111' }),
             makeBook({ id: 'b2', title: 'Book Two', isbn: '222' }),
         ];
         exportToCsv(books);
         expect(capturedBlob).not.toBeNull();
+        // Exact text — a failure pinpoints which row/field the CSV got wrong
+        const text = await capturedBlob!.text();
+        expect(text).toBe(
+            'Title,Authors,ISBN,Publisher,Published Date,Page Count\nBook One,Author A,111,Publisher Co,2024-01-01,300\nBook Two,Author A,222,Publisher Co,2024-01-01,300'
+        );
     });
 
     it('quotes fields that contain carriage returns', async () => {
