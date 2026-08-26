@@ -19,6 +19,17 @@ export function startScanning(
     ocr: TextRecognizer,
     bookSearcher: BookSearcher,
 ): void {
+    // Restart-safe: drop the previous run's pending timer and visibility
+    // handler so a stale callback can never reschedule scanning.
+    if (scanTimer) {
+        clearTimeout(scanTimer);
+        scanTimer = null;
+    }
+    if (visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler);
+        visibilityHandler = null;
+    }
+
     update({ isScanning: true });
     isPaused = false;
 
