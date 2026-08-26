@@ -526,6 +526,30 @@ describe('CameraManager', () => {
             expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: false });
         });
 
+        it('falls back to canRequestPermission:true when permissions query rejects (API unsupported)', async () => {
+            // The Permissions API may exist but query() may reject (e.g. 'camera' is
+            // not a queryable permission name on some platforms). The inner catch in
+            // requestCameraPermission() must swallow that rejection and keep the
+            // default canRequestPermission=true rather than failing the pre-flight check.
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'videoinput' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: {
+                    query: vi.fn().mockRejectedValue(new Error('Camera permission not queryable')),
+                },
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: true });
+        });
+
         it('returns safe defaults when enumerateDevices rejects', async () => {
             vi.stubGlobal('navigator', {
                 ...navigator,
