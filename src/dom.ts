@@ -35,8 +35,9 @@ export function $as<T extends HTMLElement>(
 ): T {
     const el = $(selector) as unknown as T;
     if (!(el instanceof (ctor as any))) {
+        const actualTag = (el as HTMLElement).tagName.toUpperCase();
         throw new Error(
-            `Element for "${selector}" is not an instance of ${ctor.name}`,
+            `Element for "${selector}" is not an instance of ${ctor.name} (found ${actualTag})`,
         );
     }
     return el;
