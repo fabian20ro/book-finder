@@ -1,6 +1,7 @@
 interface TesseractLine {
     text: string;
-    confidence: number;
+    /** Absent on some recognized lines; consumers normalize with a fallback. */
+    confidence?: number;
 }
 
 export interface TesseractResult {

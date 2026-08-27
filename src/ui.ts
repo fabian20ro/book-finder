@@ -478,8 +478,9 @@ function renderLanguageSelector(): void {
 }
 
 function renderBookImage(book: Book): string {
-    return book.thumbnailUrl
-        ? `<img src="${escapeHtml(book.thumbnailUrl)}" alt="Cover" loading="lazy">`
+    const isSafeImage = book.thumbnailUrl && /^https?:\/\/|data:image\//i.test(book.thumbnailUrl);
+    return isSafeImage
+        ? `<img src="${escapeHtml(book.thumbnailUrl!)}" alt="Cover" loading="lazy">`
         : `<img src="${NO_COVER_SVG}" alt="No cover">`;
 }
 

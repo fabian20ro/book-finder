@@ -222,6 +222,28 @@ describe('dom helpers', () => {
             const el = trySelector(['.a', '.b', '#nonexistent']);
             expect(el).toBeNull();
         });
+
+        it('rethrows errors other than DOMException/SyntaxError — only malformed-selector errors are swallowed', () => {
+            document.body.innerHTML = '<div id="ok">OK</div>';
+            const boom = new Error('boom');
+            // Bind the native original off the prototype: document.querySelector
+            // may still be wrapped by a spy from a prior test, and binding it
+            // directly would recurse into the new mock implementation.
+            const origQuery = Document.prototype.querySelector.bind(document);
+            const spy = vi.spyOn(document, 'querySelector').mockImplementation((sel: string) => {
+                if (sel === '[unclosed') throw boom;
+                return origQuery(sel);
+            });
+            try {
+                // A non-selector error (here a plain Error) must propagate — swallowed
+                // silently, trySelector would have continued and returned #ok.
+                expect(() => trySelector(['[unclosed', '#ok'])).toThrow(boom);
+                // A matching valid selector still resolves; no throw.
+                expect(trySelector(['#ok'])!.id).toBe('ok');
+            } finally {
+                spy.mockRestore();
+            }
+        });
     });
 
     describe('$closest', () => {
