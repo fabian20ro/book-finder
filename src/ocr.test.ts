@@ -95,6 +95,25 @@ describe('TextRecognizer', () => {
             await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized');
         });
 
+        it('rolls back the created worker when whitelist setup fails during init', async () => {
+            const failWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn().mockResolvedValue(undefined),
+                setParameters: vi.fn().mockRejectedValue(new Error('whitelist rejected')),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(failWorker as any);
+
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.init('ron', { onSetLanguage })).rejects.toThrow('whitelist rejected');
+
+            // init must be atomic: the partially configured worker is terminated and discarded,
+            // and no callback fires for a failed initialization.
+            expect(failWorker.terminate).toHaveBeenCalled();
+            expect((recognizer as any).worker).toBeNull();
+            expect(onSetLanguage).not.toHaveBeenCalled();
+        });
+
         it('throws if recognize is called before init', async () => {
             const recognizer = new TextRecognizer();
             const canvas = document.createElement('canvas');
