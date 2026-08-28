@@ -1034,19 +1034,34 @@ describe('ui', () => {
             expect((toast as HTMLElement)!.textContent).toBe('Test notification');
         });
 
-        it('removes itself after a reasonable timeout', async () => {
-            // Stub requestAnimationFrame to be synchronous so CSS class is added immediately.
+        it('keeps the toast visible during the display window and removes it after the cleanup fallback', () => {
+            vi.useFakeTimers();
+            // Stub requestAnimationFrame to be synchronous so the visible class is added immediately.
             vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(0));
+            try {
+                showToast('Will disappear');
 
-            showToast('Will disappear');
+                const toast = document.querySelector('.toast') as HTMLElement;
+                expect(toast).not.toBeNull();
+                expect(toast.classList.contains('toast-visible')).toBe(true);
 
-            const toast = document.querySelector('.toast') as HTMLElement;
-            expect(toast).not.toBeNull();
+                // Just before the display window ends, the toast is still visible and on screen.
+                vi.advanceTimersByTime(1999);
+                expect(document.querySelector('.toast')).not.toBeNull();
+                expect(toast.classList.contains('toast-visible')).toBe(true);
 
-            // Wait for the TOAST_DISPLAY_MS timeout + small buffer.
-            await vi.waitFor(() => {
+                // At 2000ms the toast starts fading: visible class removed, element still present.
+                vi.advanceTimersByTime(1);
+                expect(document.querySelector('.toast')).not.toBeNull();
+                expect(toast.classList.contains('toast-visible')).toBe(false);
+
+                // The 500ms fallback removes the element if the transition never ends.
+                vi.advanceTimersByTime(500);
                 expect(document.querySelector('.toast')).toBeNull();
-            }, { interval: 10, timeout: 3500 });
+            } finally {
+                vi.unstubAllGlobals();
+                vi.useRealTimers();
+            }
         });
     });
 });
