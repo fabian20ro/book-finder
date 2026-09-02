@@ -50,6 +50,13 @@ describe('dom helpers', () => {
             );
         });
 
+        it('reports the discovered element tag in the type-mismatch error', () => {
+            document.body.innerHTML = '<div id="d"></div>';
+            expect(() => $as('#d', HTMLVideoElement)).toThrow(
+                'Element for "#d" is not an instance of HTMLVideoElement (found DIV)',
+            );
+        });
+
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
         });
