@@ -28,6 +28,12 @@ describe('dom helpers', () => {
         it('throws DOMException for any malformed selector instead of silently returning null', () => {
             expect(() => $('[')).toThrow(DOMException);
         });
+
+        it('returns the actual DOM node reference, not a clone', () => {
+            document.body.innerHTML = '<div id="ref">R</div>';
+            const ref = $('#ref');
+            expect(ref).toBe(document.querySelector('#ref'));
+        });
     });
 
     describe('$as', () => {
