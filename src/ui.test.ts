@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { update, addBook, addCandidates, clearCandidates, getState } from './state';
-import { initUI, getAllLanguages, showError, hideError, getVisibleLanguages, showToast, type UIHandlers } from './ui';
+import { initUI, getAllLanguages, showError, hideError, getVisibleLanguages, showToast, getVideoElement, getCanvasElement, type UIHandlers } from './ui';
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {
@@ -1062,6 +1062,29 @@ describe('ui', () => {
                 vi.unstubAllGlobals();
                 vi.useRealTimers();
             }
+        });
+    });
+
+    describe('element accessors', () => {
+        it('getVideoElement and getCanvasElement return the exact DOM elements bound during initUI', () => {
+            const video = getVideoElement();
+            const canvas = getCanvasElement();
+
+            expect(video).toBeInstanceOf(HTMLVideoElement);
+            expect(video).toBe(document.getElementById('camera'));
+            expect(canvas).toBeInstanceOf(HTMLCanvasElement);
+            expect(canvas).toBe(document.getElementById('capture'));
+        });
+
+        it('element accessors keep returning the same instances across view switches', () => {
+            const video = getVideoElement();
+            const canvas = getCanvasElement();
+
+            update({ view: 'scan' });
+            update({ view: 'home' });
+
+            expect(getVideoElement()).toBe(video);
+            expect(getCanvasElement()).toBe(canvas);
         });
     });
 });
