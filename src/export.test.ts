@@ -76,8 +76,32 @@ describe('exportToCsv', () => {
         // Exact text — a failure pinpoints which row/field the CSV got wrong
         const text = await capturedBlob!.text();
         expect(text).toBe(
-            'Title,Authors,ISBN,Publisher,Published Date,Page Count\nBook One,Author A,111,Publisher Co,2024-01-01,300\nBook Two,Author A,222,Publisher Co,2024-01-01,300'
+            'Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link\nBook One,Author A,111,Publisher Co,2024-01-01,300,\nBook Two,Author A,222,Publisher Co,2024-01-01,300,'
         );
+    });
+
+    it('includes an Info Link column with a per-book URL', async () => {
+        exportToCsv([
+            makeBook({ infoLink: 'https://books.google.com/books?id=abc123' }),
+        ]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split('\n');
+        // header ends with the seventh column
+        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link');
+        // sample row carries the expected URL as the last field
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,https://books.google.com/books?id=abc123');
+    });
+
+    it('leaves the Info Link cell empty when infoLink is missing', async () => {
+        exportToCsv([makeBook({ infoLink: null })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split('\n');
+        expect(lines[0]).toContain('Info Link');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,');
     });
 
     it('quotes fields that contain carriage returns', async () => {
@@ -139,9 +163,9 @@ describe('exportToCsv', () => {
 
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
-        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count\r?\n/);
+        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link\r?\n/);
         const lines = text.split(/\r?\n/);
-        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300');
+        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300,');
     });
 
     it('produces empty cells for null optional fields and "0" for zero page count', async () => {
@@ -150,8 +174,8 @@ describe('exportToCsv', () => {
 
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
-        // title, authors, empty isbn, empty publisher, empty date, "0" for zero page count — 5 commas
-        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count\nTest Book,Author A,,,,0');
+        // title, authors, empty isbn, empty publisher, empty date, "0" for zero page count, empty info link
+        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link\nTest Book,Author A,,,,0,');
     });
 
     it('produces an empty Authors field when authors array is empty', async () => {
