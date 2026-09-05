@@ -454,6 +454,25 @@ describe('app', () => {
         expect(getTestState().candidateBooks.length).toBe(0);
     });
 
+    it('persists a newly added book to localStorage via the app-level change listener', async () => {
+        const { addBook, getBooks, on } = await import('./state');
+
+        let changeEvents = 0;
+        on('change', () => { changeEvents++; });
+
+        const added = addBook({ id: 'persisted-book', title: 'Persisted Book', authors: [] } as any);
+
+        expect(added).toBe(true);
+        expect(getBooks()).toHaveLength(1);
+        expect(getBooks()[0]).toMatchObject({ id: 'persisted-book', title: 'Persisted Book' });
+        // app.ts registers on('change', saveBooks) at module load; addBook emits 'change' exactly once
+        expect(changeEvents).toBe(1);
+        const stored = JSON.parse(localStorage.getItem('ftb-books') ?? '[]');
+        expect(stored).toEqual([
+            expect.objectContaining({ id: 'persisted-book', title: 'Persisted Book' }),
+        ]);
+    });
+
     it('emits a duplicate toast when adding an already-in-collection candidate', async () => {
         const { getState: getTestState, addCandidates, on } = await import('./state');
         const dupBook = { id: 'dup-1', title: 'Already Found', authors: [] };
