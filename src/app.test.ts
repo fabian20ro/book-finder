@@ -454,6 +454,25 @@ describe('app', () => {
         expect(getTestState().candidateBooks.length).toBe(0);
     });
 
+    it('persists a newly added book to localStorage via the app-level change listener', async () => {
+        const { addBook, getBooks, on } = await import('./state');
+
+        let changeEvents = 0;
+        on('change', () => { changeEvents++; });
+
+        const added = addBook({ id: 'persisted-book', title: 'Persisted Book', authors: [] } as any);
+
+        expect(added).toBe(true);
+        expect(getBooks()).toHaveLength(1);
+        expect(getBooks()[0]).toMatchObject({ id: 'persisted-book', title: 'Persisted Book' });
+        // app.ts registers on('change', saveBooks) at module load; addBook emits 'change' exactly once
+        expect(changeEvents).toBe(1);
+        const stored = JSON.parse(localStorage.getItem('ftb-books') ?? '[]');
+        expect(stored).toEqual([
+            expect.objectContaining({ id: 'persisted-book', title: 'Persisted Book' }),
+        ]);
+    });
+
     it('emits a duplicate toast when adding an already-in-collection candidate', async () => {
         const { getState: getTestState, addCandidates, on } = await import('./state');
         const dupBook = { id: 'dup-1', title: 'Already Found', authors: [] };
@@ -778,5 +797,62 @@ describe('app', () => {
 
     it('getLanguageUsage returns empty object when localStorage is empty', () => {
         expect(appModule.getLanguageUsage()).toEqual({});
+    });
+
+    it('does not emit a change event when update receives an unchanged value', async () => {
+        const { update, on, getState } = await import('./state');
+        let changeCount = 0;
+        on('change', () => { changeCount++; });
+
+        // Writing back the current value must be a no-op (no emit)
+        const currentLang = getState().ocrLanguage;
+        update({ ocrLanguage: currentLang });
+
+        expect(changeCount).toBe(0);
+    });
+
+    it('moveBook reorders books and emits exactly one change event', async () => {
+        const { addBook, getState, moveBook, on } = await import('./state');
+        addBook({ id: 'mb-1', title: 'Book A', authors: [] } as any);
+        addBook({ id: 'mb-2', title: 'Book B', authors: [] } as any);
+
+        let changeCount = 0;
+        on('change', () => { changeCount++; });
+
+        moveBook(1, 0); // move Book B to the front
+
+        const books = getState().books;
+        expect(books[0].id).toBe('mb-2');
+        expect(books[1].id).toBe('mb-1');
+        expect(changeCount).toBe(1);
+    });
+
+    it('moveBook is a no-op (no emit) when from and to indices are equal', async () => {
+        const { addBook, moveBook, on } = await import('./state');
+        addBook({ id: 'mn-1', title: 'Only', authors: [] } as any);
+
+        let changeCount = 0;
+        on('change', () => { changeCount++; });
+
+        moveBook(0, 0);
+
+        expect(changeCount).toBe(0);
+    });
+
+    it('clearBooks empties books, resets candidateFilter, and emits change', async () => {
+        const { addBook, update, getState, clearBooks, on } = await import('./state');
+        addBook({ id: 'cb-1', title: 'Clear A', authors: [] } as any);
+        addBook({ id: 'cb-2', title: 'Clear B', authors: [] } as any);
+        update({ candidateFilter: 'search-term' });
+
+        let changeCount = 0;
+        on('change', () => { changeCount++; });
+
+        clearBooks();
+
+        const st = getState();
+        expect(st.books).toHaveLength(0);
+        expect(st.candidateFilter).toBe('');
+        expect(changeCount).toBe(1);
     });
 });
