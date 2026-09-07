@@ -855,4 +855,57 @@ describe('app', () => {
         expect(st.candidateFilter).toBe('');
         expect(changeCount).toBe(1);
     });
+
+    it('setView switches the view and an invalid mode throws', async () => {
+        const { setView, getState } = await import('./state');
+
+        setView('scan');
+        expect(getState().view).toBe('scan');
+
+        expect(() => setView('invalid' as any)).toThrow(
+            'Invalid view mode: "invalid". Allowed modes are "home" or "scan".'
+        );
+        expect(getState().view).toBe('scan');
+    });
+
+    it('removeCandidateById trims the id, removes the match, and emits once', async () => {
+        const { addCandidates, removeCandidateById, getState, on } = await import('./state');
+        addCandidates([
+            { id: 'rc-1', title: 'Candidate A', authors: [] } as any,
+            { id: 'rc-2', title: 'Candidate B', authors: [] } as any,
+        ]);
+
+        let changeCount = 0;
+        on('change', () => { changeCount++; });
+
+        removeCandidateById('  rc-1  ');
+
+        const st = getState();
+        expect(st.candidateBooks).toHaveLength(1);
+        expect(st.candidateBooks[0].id).toBe('rc-2');
+        expect(changeCount).toBe(1);
+
+        // No matching id: candidates unchanged and no extra emit.
+        removeCandidateById('no-such-id');
+        expect(getState().candidateBooks).toHaveLength(1);
+        expect(changeCount).toBe(1);
+    });
+
+    it('clearAll empties books and candidates, resets the filter, and emits change', async () => {
+        const { addBook, addCandidates, update, getState, clearAll, on } = await import('./state');
+        addBook({ id: 'ca-book', title: 'Clear All Book', authors: [] } as any);
+        addCandidates([{ id: 'ca-cand', title: 'Clear All Candidate', authors: [] } as any]);
+        update({ candidateFilter: 'filter-term' });
+
+        let changeCount = 0;
+        on('change', () => { changeCount++; });
+
+        clearAll();
+
+        const st = getState();
+        expect(st.books).toHaveLength(0);
+        expect(st.candidateBooks).toHaveLength(0);
+        expect(st.candidateFilter).toBe('');
+        expect(changeCount).toBe(1);
+    });
 });
