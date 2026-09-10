@@ -552,6 +552,24 @@ describe('scanner', () => {
             expect(result[1].title).toBe('Book Two');
         });
 
+        it('deduplicates books with the same id returned by multiple queries', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const book2 = makeBook('b2', 'Book Two');
+            const books = createMockBookSearcher();
+            // Two queries fire: combined='longtext1 short' + individual='longtext1'.
+            // Both queries return book 'b1'; the combined query also returns 'b2'.
+            // seenIds must collapse the duplicate 'b1' so the result holds it once.
+            books.search
+                .mockResolvedValueOnce([book1, book2]) // combined
+                .mockResolvedValueOnce([book1]);        // individual (duplicate id)
+
+            const result = await searchTextBlocks(toOcrLines(['longtext1', 'short']), books as any);
+
+            expect(result).toHaveLength(2); // b1 once, not twice
+            expect(result.filter((b) => b.id === 'b1')).toHaveLength(1);
+            expect(result.map((b) => b.id)).toEqual(['b1', 'b2']);
+        });
+
         it('limits total queries to MAX_QUERIES_PER_SCAN', async () => {
             const books = createMockBookSearcher();
             // 1 combined + 5 long individuals = 6 queries total, should be capped to 5
