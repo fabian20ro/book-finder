@@ -481,3 +481,20 @@ test('addBook() rejects null, undefined, and non-object arguments', () => {
   // State should remain unchanged
   expect(getState().books).toEqual(beforeState.books);
 });
+
+test('addCandidates() inserts only the first of two same-id entries within one batch', () => {
+  let count = 0;
+  const off = on('change', () => { count++; });
+
+  addCandidates([
+    { id: 'batch-dup', title: 'First Copy', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 },
+    { id: 'batch-dup', title: 'Second Copy', authors: ['B'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 },
+  ]);
+
+  // second entry is a duplicate of the first within the same batch — inserted once, one change event
+  expect(count).toBe(1);
+  expect(getState().candidateBooks.map((b) => b.id)).toEqual(['batch-dup']);
+  // the first copy wins
+  expect(getState().candidateBooks[0].title).toBe('First Copy');
+  off();
+});

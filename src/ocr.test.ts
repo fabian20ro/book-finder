@@ -340,6 +340,9 @@ describe('TextRecognizer', () => {
             // setParameters fails after createWorker succeeds — rollback restores the original worker.
             await expect(recognizer.setLanguage('eng')).rejects.toThrow('bad param');
 
+            // The orphaned new worker must be terminated — no leaked Tesseract workers on a failed switch.
+            expect(failWorker.terminate).toHaveBeenCalled();
+
             // currentLang and worker must revert to pre-switch values.
             expect(recognizer.getLanguage()).toBe('ron');
             expect((recognizer as any).worker).toBe(prevWorker);

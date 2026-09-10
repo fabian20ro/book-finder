@@ -172,6 +172,26 @@ describe('preprocessCanvas', () => {
         expect(result).toBe(canvas);
     });
 
+    it('should force output alpha to fully opaque (255) regardless of input alpha', () => {
+        // preprocessCanvas writes the output alpha channel as a hardcoded 255 (ocr.ts line 114)
+        // because OCR requires opaque frames. Every existing test uses alpha=255 inputs, so a
+        // regression changing the output alpha to pass through src alpha (e.g. a partially
+        // transparent frame) would go unnoticed. This fixture uses alpha=128 to pin the contract.
+        for (let i = 0; i < mockCtx.data.length; i += 4) {
+            mockCtx.data[i]     = 150;
+            mockCtx.data[i + 1] = 150;
+            mockCtx.data[i + 2] = 150;
+            mockCtx.data[i + 3] = 128; // partially transparent input
+        }
+
+        const result = preprocessCanvas(canvas);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        for (let i = 0; i < data.length; i += 4) {
+            expect(data[i + 3]).toBe(255); // output alpha is always forced opaque
+        }
+    });
+
     it('should darken dark edge pixels when surrounded by light neighbors (clamped-blur sharpening)', () => {
         // 3x1 strip: a single dark pixel flanked by bright pixels. The clamped-edge blur at the
         // leftmost pixel averages itself with two bright neighbors, producing a blurred value > 0;
