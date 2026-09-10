@@ -34,6 +34,13 @@ describe('dom helpers', () => {
             const ref = $('#ref');
             expect(ref).toBe(document.querySelector('#ref'));
         });
+
+        it('returns non-HTMLElement nodes (e.g. SVG) as-is — HTMLElement return type is a type-level cast, not a runtime check', () => {
+            document.body.innerHTML = '<svg id="sv"></svg>';
+            const el = $('#sv');
+            expect(el).toBe(document.querySelector('#sv'));
+            expect(el).not.toBeInstanceOf(HTMLElement);
+        });
     });
 
     describe('$as', () => {
@@ -65,6 +72,13 @@ describe('dom helpers', () => {
 
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
+        });
+
+        it('accepts a derived element when a base constructor is requested (instanceof follows the prototype chain)', () => {
+            document.body.innerHTML = '<video id="v"></video>';
+            const el = $as('#v', HTMLElement);
+            expect(el).toBe(document.querySelector('#v'));
+            expect(el).toBeInstanceOf(HTMLElement);
         });
     });
 
@@ -117,6 +131,13 @@ describe('dom helpers', () => {
             expect(els[0].textContent).toBe('third');
             expect(els[1].textContent).toBe('first');
             expect(els[2].textContent).toBe('second');
+        });
+
+        it('returns live DOM references — mutating an element via the array mutates the document', () => {
+            document.body.innerHTML = '<span class="live">one</span>';
+            const els = $$('.live');
+            els[0].textContent = 'changed';
+            expect(document.querySelector('.live')!.textContent).toBe('changed');
         });
     });
 
