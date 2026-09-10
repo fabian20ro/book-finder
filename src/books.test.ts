@@ -952,6 +952,21 @@ describe('queryMatchRatio', () => {
         expect(score).toBe(1);
     });
 
+    it('matches pure-digit query terms found only in the pageCount field', () => {
+        // Production code includes book.pageCount?.toString() in the joined
+        // search text, so a digit query that appears nowhere else must still match.
+        expect(queryMatchRatio(
+            makeBookData({ title: 'Nope Title', pageCount: 142 }),
+            '142',
+        )).toBe(1);
+
+        // A digit query not present in any metadata field (including pageCount) does not match.
+        expect(queryMatchRatio(
+            makeBookData({ title: 'Nope Title', pageCount: 142 }),
+            '999',
+        )).toBe(0);
+    });
+
     it('matches words found only in description field', () => {
         // Both sides produce ["jk"] after clean/split/merge/filter. Identical tokens → full ratio = 1.
         expect(queryMatchRatio(
