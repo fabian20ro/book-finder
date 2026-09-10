@@ -70,6 +70,20 @@ describe('CameraManager', () => {
         vi.restoreAllMocks();
     });
 
+    describe('constructor', () => {
+        it('throws when the video element is missing', () => {
+            expect(
+                () => new CameraManager(null as unknown as HTMLVideoElement, canvas),
+            ).toThrow('Camera requires valid video and canvas elements');
+        });
+
+        it('throws when the canvas element is missing', () => {
+            expect(
+                () => new CameraManager(video, null as unknown as HTMLCanvasElement),
+            ).toThrow('Camera requires valid video and canvas elements');
+        });
+    });
+
     describe('start', () => {
         it('requests environment-facing camera', async () => {
             const camera = new CameraManager(video, canvas);
