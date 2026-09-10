@@ -35,6 +35,19 @@ describe('Book scoring logic', () => {
     expect(queryMatchRatio(baseBook, 'Gatsby & Fitzgerald')).toBe(1);
   });
 
+  it('queryMatchRatio returns a fractional ratio when only some query words match', () => {
+    // "jazz" appears in baseBook's description but "novel" matches no searchable
+    // field, so matched/total must be exactly 1/2 — extremes (0 and 1) alone
+    // cannot prove the ratio is computed as a fraction rather than clamped.
+    expect(queryMatchRatio(baseBook, 'jazz novel')).toBe(0.5);
+  });
+
+  it('computeConfidence adds the rounded partial query-match contribution', () => {
+    // 50 (full baseBook metadata) + Math.round(0.5 * 30) = 65 — a half-match
+    // query must contribute 15 points, not 0 or the full 30.
+    expect(computeConfidence(baseBook, undefined, undefined, 'jazz novel')).toBe(65);
+  });
+
   it('computeConfidence calculates correctly', () => {
     const confidence = computeConfidence(baseBook, 5, 100, 'Gatsby');
     expect(confidence).toBe(100);

@@ -511,6 +511,37 @@ describe('ocr utilities', () => {
             expect(result).toEqual([]);
         });
 
+        it('skips Tesseract entirely for dark frames when minFrameBrightness is set, but proceeds for bright frames', async () => {
+            // recognize() has a guard: when options.minFrameBrightness is defined and
+            // frameBrightness(processed) is below it, the method returns [] WITHOUT calling
+            // worker.recognize() — a dark-frame skip meant to avoid wasted OCR cycles.
+            // No existing test covers this branch. Verify both directions so the option
+            // observably gates (not just always returns []): dark frame → [] and the worker
+            // is never invoked; bright frame → the worker IS invoked.
+            const mockWorker = { recognize: vi.fn().mockResolvedValue({ data: { lines: [] } }) };
+            (recognizer as any).worker = mockWorker;
+            (recognizer as any).options = { minFrameBrightness: 200 };
+
+            // Dark frame: all-black 3×3 input preprocesses to black → brightness 0 < 200.
+            canvas.width = 3;
+            canvas.height = 3;
+            const black = new Uint8ClampedArray(36).fill(0);
+            for (let i = 3; i < black.length; i += 4) black[i] = 255; // alpha
+            mockCtx.putImageData(new ImageData(black, 3, 3));
+
+            const darkResult = await recognizer.recognize(canvas);
+            expect(darkResult).toEqual([]);
+            expect(mockWorker.recognize).not.toHaveBeenCalled();
+
+            // Bright frame: all-white 3×3 input preprocesses to white → brightness 255 >= 200.
+            const white = new Uint8ClampedArray(36).fill(255);
+            mockCtx.putImageData(new ImageData(white, 3, 3));
+
+            const brightResult = await recognizer.recognize(canvas);
+            expect(brightResult).toEqual([]); // worker returns no lines
+            expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
+        });
+
         it('filters out lines with confidence below minLineConfidence', async () => {
             // The recognize() pipeline filters by both text length and line confidence.
             // This test verifies that low-confidence results are dropped before reaching the caller,
