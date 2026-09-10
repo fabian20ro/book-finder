@@ -159,6 +159,23 @@ describe('parsing stored books', () => {
         expect(result[1].id).toBe('mixed-authors');
     });
 
+    it('drops non-string and whitespace-only entries from mixed author arrays', () => {
+        const json = JSON.stringify([
+            {
+                id: 'mixed-author-noise',
+                title: 'Mixed Author Noise',
+                authors: ['  ', 'Real Author', 42, null, '  Second  '],
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        // Non-string elements (number, null) are dropped, whitespace-only
+        // strings are removed after trim, valid authors keep their trimmed form.
+        expect(result[0].authors).toEqual(['Real Author', 'Second']);
+    });
+
     it('trims whitespace from optional metadata fields', () => {
         const json = JSON.stringify([
             {
