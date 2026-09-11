@@ -529,6 +529,27 @@ describe('Book logic', () => {
             vi.useRealTimers();
         });
 
+        it('removes the query from the cache on rate-limit (429) so the next search re-fetches', async () => {
+            const searcher = new BookSearcher();
+            vi.useFakeTimers();
+            const fetchMock = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 429,
+                json: async () => ({}),
+            });
+            vi.stubGlobal('fetch', fetchMock);
+            void searcher.search('retry me');
+            await vi.runAllTimersAsync();
+            // 429 branch deletes the normalized query from queryCache so it can be retried.
+            expect((searcher as any).queryCache.has('retry me')).toBe(false);
+            // A subsequent search must hit the API again instead of short-circuiting on the cache.
+            void searcher.search('retry me');
+            await vi.runAllTimersAsync();
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+            vi.unstubAllGlobals();
+            vi.useRealTimers();
+        });
+
         it('search does not call notify on successful empty response', async () => {
             const notify = vi.fn();
             const searcher = new BookSearcher(notify);

@@ -454,6 +454,21 @@ describe('state', () => {
             const ids = getState().books.map((b) => b.id);
             expect(ids).toEqual(['y', 'z', 'x']);
         });
+
+        it('does nothing for non-integer indices (no mutation, no emit)', () => {
+            addBook(makeBook({ id: 'a' }));
+            addBook(makeBook({ id: 'b' }));
+            addBook(makeBook({ id: 'c' }));
+
+            const listener = vi.fn();
+            on('change', listener);
+            // 1.5 is within the index range but not an integer; NaN never compares in range
+            moveBook(1.5, 0);
+            moveBook(0, NaN);
+            expect(listener).not.toHaveBeenCalled();
+            const ids = getState().books.map((b) => b.id);
+            expect(ids).toEqual(['a', 'b', 'c']);
+        });
     });
 
     describe('clearBooks', () => {
