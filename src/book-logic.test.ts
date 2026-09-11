@@ -744,6 +744,43 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'J K')).toBe(1);
         });
 
+        it('parseBook upgrades http thumbnail URLs to https', async () => {
+            const searcher = new BookSearcher();
+            // The Google Books API returns thumbnail URLs with an http:// prefix;
+            // parseBook must rewrite them to https:// so the UI never loads insecure images.
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    items: [{
+                        id: 'vol-thumb',
+                        volumeInfo: {
+                            title: 'Thumb Book',
+                            authors: ['X'],
+                            imageLinks: { thumbnail: 'http://books.example.com/thumb.jpg' },
+                        },
+                    }],
+                }),
+            }));
+            const results = await searcher.search('Thumb Book');
+            expect(results).toHaveLength(1);
+            expect(results[0].thumbnailUrl).toBe('https://books.example.com/thumb.jpg');
+            vi.unstubAllGlobals();
+        });
+
+        it('parseBook stores null thumbnailUrl when imageLinks is absent', async () => {
+            const searcher = new BookSearcher();
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    items: [{ id: 'vol-no-thumb', volumeInfo: { title: 'No Thumb Book', authors: ['X'] } }],
+                }),
+            }));
+            const results = await searcher.search('No Thumb Book');
+            expect(results).toHaveLength(1);
+            expect(results[0].thumbnailUrl).toBeNull();
+            vi.unstubAllGlobals();
+        });
+
         it('search deduplicates preloaded books across multiple calls', async () => {
             const searcher = new BookSearcher();
             const notify = vi.fn();
