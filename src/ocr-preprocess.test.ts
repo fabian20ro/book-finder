@@ -614,6 +614,20 @@ describe('ocr utilities', () => {
             expect(result).toEqual([]);
         });
 
+        it('throws when Tesseract returns a result without data', async () => {
+            // recognize() validates the worker result: `if (!result || !result.data)` throws
+            // 'Tesseract recognition returned invalid result'. Existing tests only exercise
+            // results that carry a valid data object, so this malformed-shape branch is
+            // untested — a regression silently treating undefined data as empty text would
+            // not be caught by the current suite.
+            const mockWorker = { recognize: vi.fn().mockResolvedValue({}) };
+            (recognizer as any).worker = mockWorker;
+
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('Tesseract recognition returned invalid result');
+            expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
+            expect((recognizer as any).isProcessing).toBe(false);
+        });
+
         it('sets isProcessing back to false after recognize completes', async () => {
             // The finally block in recognize() must reset isProcessing so subsequent calls work.
             // A lingering true value would block all future OCR on that recognizer instance.

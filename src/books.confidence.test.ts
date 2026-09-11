@@ -501,6 +501,38 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher routes ISBN-like queries to the dedicated volume endpoint, not the q= search', async () => {
+    // search() in books.ts: when isISBN(trimmed) is true, fetch targets
+    // `volumes/{trimmed}` (direct lookup) instead of `volumes?q=...&maxResults=10`.
+    // Existing isISBN unit tests cover detection only; the fetched URL — the
+    // observable routing contract — was never asserted.
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/volumes/978-0-7432-7654-0')) {
+        return { ok: true, status: 200, json: async () => ({ items: [{ id: 'isbn-book', volumeInfo: { title: 'Direct', authors: ['A'] } }] }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    });
+    globalThis.fetch = fetchMock as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('978-0-7432-7654-0');
+      expect(results.length).toBe(1);
+      expect(results[0].id).toBe('isbn-book');
+      // The trimmed query (hyphens preserved) hits the dedicated endpoint, not a q= search.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][0]).toBe('https://www.googleapis.com/books/v1/volumes/978-0-7432-7654-0');
+
+      // Contrast: a non-ISBN query must use the general search endpoint.
+      await searcher.search('great gatsby');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[1][0]).toBe('https://www.googleapis.com/books/v1/volumes?q=great%20gatsby&maxResults=10');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('BookSearcher deduplicates book ids across separate search calls', async () => {
     // foundBookIds must persist between independent .search() calls so a book already returned
     // to the user is not surfaced again later (e.g. after a rate-limit backoff and retry).

@@ -381,6 +381,24 @@ describe('BookSearcher', () => {
         });
     });
 
+    describe('searchCount', () => {
+        it('stays 0 because search() never increments it (characterization)', async () => {
+            expect(searcher.searchCount).toBe(0);
+
+            vi.stubGlobal('fetch', mockFetchResponse(
+                googleBooksResponse([volume('v-count', 'Count Book')]),
+            ));
+            const results = await searcher.search('count book');
+            expect(results).toHaveLength(1);
+            expect(searcher.searchCount).toBe(0);
+
+            // Cache-hit and short-query short-circuit paths also leave it at 0.
+            expect(await searcher.search('count book')).toEqual([]);
+            expect(await searcher.search('x')).toEqual([]);
+            expect(searcher.searchCount).toBe(0);
+        });
+    });
+
     describe('queryMatchRatio — empty metadata edge case', () => {
         const emptyBook = (title?: string) => ({
             id: 'b-empty',
