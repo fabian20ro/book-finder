@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CameraManager } from './camera';
+import { getContext2D } from './dom';
 
 // Mock the dom module's getContext2D since jsdom doesn't support canvas
 vi.mock('./dom', () => {
@@ -281,6 +282,28 @@ describe('CameraManager', () => {
 
             const result = camera.captureFrame();
             expect(result).toBe(canvas);
+        });
+
+        it('draws the current video frame onto the canvas context', async () => {
+            const drawImage = getContext2D(canvas).drawImage as ReturnType<typeof vi.fn>;
+            drawImage.mockClear();
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            camera.captureFrame();
+
+            expect(drawImage).toHaveBeenCalledTimes(1);
+            expect(drawImage).toHaveBeenCalledWith(video, 0, 0);
+        });
+
+        it('does not draw when video has no width', () => {
+            const drawImage = getContext2D(canvas).drawImage as ReturnType<typeof vi.fn>;
+            drawImage.mockClear();
+            const camera = new CameraManager(video, canvas);
+            Object.defineProperty(video, 'videoWidth', { value: 0, configurable: true });
+
+            expect(camera.captureFrame()).toBeNull();
+            expect(drawImage).not.toHaveBeenCalled();
         });
     });
 
