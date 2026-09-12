@@ -576,9 +576,12 @@ describe('Book logic', () => {
             const searcher = new BookSearcher();
             // Pre-populate the cache directly (bypass search to avoid a real fetch).
             (searcher as any).queryCache.add('cached-query');
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
-            await searcher.search('cached-query'); // normalized lowercase — matches cache key exactly
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+            vi.stubGlobal('fetch', fetchMock);
+            const results = await searcher.search('cached-query'); // normalized lowercase — matches cache key exactly
+            expect(results).toEqual([]); // cache hit short-circuits before the API call
             expect((searcher as any).queryCache.has('cached-query')).toBe(true);
+            expect(fetchMock).not.toHaveBeenCalled(); // cached query must never reach fetch
             vi.unstubAllGlobals();
         });
 
