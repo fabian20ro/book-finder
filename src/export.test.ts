@@ -142,6 +142,16 @@ describe('exportToCsv', () => {
         expect(lines[1]).toContain('"Pub, Inc."');
     });
 
+    it('quotes the Authors field when a book has multiple authors', async () => {
+        exportToCsv([makeBook({ authors: ['Alice', 'Bob'] })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split(/\r?\n/);
+        // authors join with ", " — the comma forces a quoted CSV cell
+        expect(lines[1]).toBe('Test Book,"Alice, Bob",9781234567890,Publisher Co,2024-01-01,300,');
+    });
+
     it('escapes double quotes in ISBN field', async () => {
         exportToCsv([makeBook({ isbn: '978-0-"Test"-ABC' })]);
 

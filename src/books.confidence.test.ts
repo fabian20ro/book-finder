@@ -533,6 +533,38 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher routes a space-separated ISBN to the direct endpoint with spaces percent-encoded', async () => {
+    // The routing test above only covers a hyphen-separated ISBN, and hyphens
+    // pass through encodeURIComponent unchanged — so the direct-lookup URL
+    // coincides with the raw query and the test cannot distinguish whether the
+    // URL is built from encodeURIComponent(trimmed) or from the raw string.
+    // A space-separated ISBN exercises that contract: isISBN() accepts spaces,
+    // and each separator must become %20 in `volumes/${encodeURIComponent(trimmed)}`.
+    // A regression that strips spaces, drops encoding, or targets the q= search
+    // instead of the direct lookup would break this assertion.
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/volumes/978%200%207432%207654%200')) {
+        return { ok: true, status: 200, json: async () => ({ items: [{ id: 'isbn-space-book', volumeInfo: { title: 'Space ISBN', authors: ['A'] } }] }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    });
+    globalThis.fetch = fetchMock as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('978 0 7432 7654 0');
+      expect(results.length).toBe(1);
+      expect(results[0].id).toBe('isbn-space-book');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      // The trimmed query is percent-encoded — each space becomes %20 — and
+      // hits the dedicated volume endpoint, not the q= general search.
+      expect(fetchMock.mock.calls[0][0]).toBe('https://www.googleapis.com/books/v1/volumes/978%200%207432%207654%200');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('BookSearcher deduplicates book ids across separate search calls', async () => {
     // foundBookIds must persist between independent .search() calls so a book already returned
     // to the user is not surfaced again later (e.g. after a rate-limit backoff and retry).

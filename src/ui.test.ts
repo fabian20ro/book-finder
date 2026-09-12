@@ -183,6 +183,26 @@ describe('ui', () => {
             expect(handlers.onAutoScanToggle).toHaveBeenCalled();
         });
 
+        it('calls onAutoScanToggle when space or Enter is pressed on the toggle', () => {
+            const toggle = document.getElementById('auto-scan-switch')!;
+
+            const spaceEvent = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+            toggle.dispatchEvent(spaceEvent);
+            expect(handlers.onAutoScanToggle).toHaveBeenCalledTimes(1);
+            expect(spaceEvent.defaultPrevented).toBe(true);
+
+            const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+            toggle.dispatchEvent(enterEvent);
+            expect(handlers.onAutoScanToggle).toHaveBeenCalledTimes(2);
+            expect(enterEvent.defaultPrevented).toBe(true);
+
+            // A non-toggle key must not trigger the handler or prevent default
+            const otherEvent = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+            toggle.dispatchEvent(otherEvent);
+            expect(handlers.onAutoScanToggle).toHaveBeenCalledTimes(2);
+            expect(otherEvent.defaultPrevented).toBe(false);
+        });
+
         it('calls onManualScan when scan now button clicked', () => {
             document.getElementById('btn-scan-now')!.click();
             expect(handlers.onManualScan).toHaveBeenCalled();
