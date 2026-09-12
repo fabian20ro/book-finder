@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, update, addBook, removeBook, moveBook, clearBooks, setView, addCandidates, removeCandidateById, clearAll, clearCandidates, toast, on, emit } from './state';
+import { getState, getBooks, update, addBook, removeBook, moveBook, clearBooks, setView, addCandidates, removeCandidateById, clearAll, clearCandidates, toast, on, emit } from './state';
 
 describe('update (edge cases)', () => {
     it('does not emit change when updating to the same value', () => {
@@ -80,6 +80,20 @@ describe('state', () => {
             expect(state.ocrLanguage).toBe('ron');
             expect(state.isChangingLanguage).toBe(false);
             expect(state.candidateFilter).toBe('');
+        });
+    });
+
+    describe('getBooks', () => {
+        it('returns the same books list as state (live reference)', () => {
+            const state = getState();
+            expect(getBooks()).toBe(state.books);
+            expect(getBooks()).toEqual([]);
+        });
+
+        it('reflects books added via addBook', () => {
+            addBook(makeBook());
+            expect(getBooks()).toHaveLength(1);
+            expect(getBooks()[0]).toMatchObject({ id: 'book-1', title: 'Test Book' });
         });
     });
 
