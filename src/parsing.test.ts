@@ -145,6 +145,21 @@ describe('parsing stored books', () => {
         expect(result[3].confidence).toBe(0);
     });
 
+    it('preserves exact boundary values 0 and 100 for confidence', () => {
+        const json = JSON.stringify([
+            { id: 'lower-bound', title: 'Lower Bound', confidence: 0 },
+            { id: 'upper-bound', title: 'Upper Bound', confidence: 100 },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(2);
+        // 0 is a valid confidence value (lower boundary), not treated as missing
+        expect(result[0].confidence).toBe(0);
+        // 100 is a valid confidence value (upper boundary), not clamped further
+        expect(result[1].confidence).toBe(100);
+    });
+
     it('keeps books with empty author arrays but returns them still', () => {
         const json = JSON.stringify([
             { id: 'all-whitespace-authors', title: 'Trimmed Authors', authors: ['  ', '', null, undefined] },
