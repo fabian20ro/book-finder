@@ -392,6 +392,32 @@ describe('preprocessCanvas', () => {
 
             expect(brightness).toBeCloseTo(955 / 9, 1); // ~106.11 ±0.1
         });
+
+        it('should exclude unsampled pixels from the average once the frame exceeds the sampling threshold', () => {
+            // frameBrightness samples with step = max(1, floor(pixels/400)) * 4 bytes.
+            // For a 29x29 frame (841 pixels) the step is 8 bytes = every second pixel, so only
+            // even pixel indices contribute to the average. The existing sampling test uses
+            // uniform fills, which return the same average at any step and would therefore
+            // miss a regression to full-pixel scanning. This fixture alternates values so the
+            // average only matches when the odd-indexed (unsampled) pixels are genuinely
+            // skipped: 421 sampled pixels at 100 -> 100, while a full scan would give
+            // (421*100 + 420*250)/841 ≈ 174.9.
+            canvas.width = 29;
+            canvas.height = 29;
+            const pixels = 29 * 29; // 841
+            mockCtx.data = new Uint8ClampedArray(pixels * 4);
+            for (let p = 0; p < pixels; p++) {
+                const v = p % 2 === 0 ? 100 : 250;
+                mockCtx.data[p * 4]     = v;
+                mockCtx.data[p * 4 + 1] = v;
+                mockCtx.data[p * 4 + 2] = v;
+                mockCtx.data[p * 4 + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(100); // only the 421 even-indexed (sampled) pixels contribute
+        });
     });
 
     it('should apply documented grayscale coefficients to non-uniform RGB input', () => {
