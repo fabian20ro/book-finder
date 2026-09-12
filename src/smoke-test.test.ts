@@ -212,6 +212,7 @@ test('clearBooks() empties the list and emits change', () => {
   const off = on('change', () => { emitted = true; });
 
   addBook({ id: 'keep-me', title: 'Should vanish', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  update({ candidateFilter: 'stale filter' });
 
   clearBooks();
 
@@ -219,6 +220,24 @@ test('clearBooks() empties the list and emits change', () => {
   expect(state.books).toHaveLength(0);
   expect(emitted).toBe(true);
 
+  off();
+});
+
+test('clearBooks() resets candidateFilter and leaves candidateBooks untouched', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'lib-a', title: 'Library Book', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addCandidates([{ id: 'cand-a', title: 'Candidate Book', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+  update({ candidateFilter: 'stale filter' });
+
+  clearBooks();
+
+  const state = getState();
+  expect(state.books).toHaveLength(0);
+  expect(state.candidateFilter).toBe('');
+  // only the library list is cleared — candidates must survive
+  expect(state.candidateBooks).toHaveLength(1);
+  expect(state.candidateBooks[0].id).toBe('cand-a');
   off();
 });
 
