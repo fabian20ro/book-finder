@@ -655,6 +655,44 @@ describe('TextRecognizer', () => {
             ]);
         });
 
+        it('defaults a line to confidence 0 when Tesseract omits confidence, discarding it at the default threshold', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can return lines with no confidence field — e.g. structural artifacts.
+            // Production defaults the missing value to 0 (line.confidence ?? 0).
+            mockWorker.recognize.mockResolvedValue({
+                data: {
+                    lines: [
+                        { text: 'Missing Confidence' }, // no confidence property
+                        { text: 'Good Line', confidence: 80 },
+                    ],
+                },
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // With the default minLineConfidence (40), the confidence-0 line is discarded.
+            const results = await recognizer.recognize(canvas);
+            expect(results).toEqual([{ text: 'Good Line', confidence: 80 }]);
+
+            // With minLineConfidence lowered to 0, the omitted-confidence line must come
+            // back with confidence exactly 0 — pinning the default, not just the filter.
+            mockWorker.recognize.mockClear();
+            const lenientRecognizer = new TextRecognizer();
+            await lenientRecognizer.init('ron', { minLineConfidence: 0 });
+            const lenientResults = await lenientRecognizer.recognize(canvas);
+            expect(lenientResults).toEqual([
+                { text: 'Missing Confidence', confidence: 0 },
+                { text: 'Good Line', confidence: 80 },
+            ]);
+        });
+
         it('resets isProcessing after transient Tesseract error during recognize', async () => {
             const mockWorker = {
                 recognize: vi.fn().mockRejectedValue(new Error('transient ocr failure')),
