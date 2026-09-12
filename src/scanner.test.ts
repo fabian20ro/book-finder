@@ -306,6 +306,9 @@ describe('scanner', () => {
 
             await scanOnce(camera as any, ocr as any, books as any);
             expect(state.toast).toHaveBeenCalledWith('No new books found');
+            // Failure-specific: scanCount is incremented before the search runs,
+            // so a "no new books" outcome still records the completed scan
+            expect(state.getState().scanCount).toBe(1);
         });
 
         it('toasts when captureFrame returns null', async () => {
