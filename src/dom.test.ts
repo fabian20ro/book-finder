@@ -98,6 +98,16 @@ describe('dom helpers', () => {
             expect(els).toEqual([]);
         });
 
+        it('throws DOMException for empty or malformed selector — no array is returned in that case', () => {
+            // document.querySelectorAll throws for invalid CSS (empty string,
+            // unclosed bracket). Unlike the valid-no-match case (empty array),
+            // $$ propagates the raw DOMException — it never returns an array
+            // for an invalid selector.
+            document.body.innerHTML = '<div id="other">X</div>';
+            expect(() => $$('')).toThrow(DOMException);
+            expect(() => $$('[')).toThrow(DOMException);
+        });
+
         it('returns real Array, not NodeList', () => {
             document.body.innerHTML = '<span class="s">1</span><span class="s">2</span>';
             const els = $$('.s');
