@@ -364,6 +364,30 @@ describe('CameraManager', () => {
             const camera = new CameraManager(video, canvas);
             camera.stop(); // should not throw
         });
+
+        it('stops the track and the disconnect handler still fires exactly once on track end', async () => {
+            const onDisconnect = vi.fn();
+            const camera = new CameraManager(video, canvas);
+            await camera.start(onDisconnect);
+            camera.stop();
+
+            // stop() calls track.stop() on every track (camera.ts stop()).
+            expect(mockStream.track.stop).toHaveBeenCalledTimes(1);
+
+            // start() registered a real 'ended' listener on the track. Firing it —
+            // the event the browser dispatches when a track ends or is revoked —
+            // must invoke onDisconnect exactly once, proving the lifecycle wiring
+            // from start() through stop() reaches the disconnect handler.
+            const endedCall = mockStream.track.addEventListener.mock.calls.find(
+                (call) => call[0] === 'ended',
+            );
+            expect(endedCall).toBeDefined();
+            const onEnded = endedCall![1];
+
+            onEnded();
+
+            expect(onDisconnect).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('getUserMedia edge cases', () => {
