@@ -584,6 +584,31 @@ describe('ocr utilities', () => {
             expect(result[1].text).toBe('hello world');
         });
 
+        it('drops lines with non-string or missing text and lines missing confidence (defaults to 0)', async () => {
+            // The filter pipeline guarantees callers only see well-formed lines:
+            //   1. lines whose `text` is not a string (or is missing entirely) are excluded
+            //      by `typeof line.text === 'string'` — no existing test exercises this guard;
+            //   2. a line without a `confidence` field gets `confidence ?? 0`, which falls
+            //      below the default minLineConfidence of 40 and is dropped — no existing
+            //      test covers the missing-confidence default.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: 'valid line', confidence: 90 },   // well-formed → kept
+                        { text: 42, confidence: 99 },             // non-string text → excluded by type guard
+                        { confidence: 99 },                       // no text property → excluded by type guard
+                        { text: 'missing confidence' }            // confidence undefined → 0 < 40 → dropped
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toHaveLength(1);
+            expect(result[0].text).toBe('valid line');
+            expect(result[0].confidence).toBe(90);
+        });
+
         it('trims whitespace from recognized text', async () => {
             // Tesseract output often includes leading/trailing whitespace in line text.
             // The recognize() pipeline trims this before returning, ensuring consistent data.

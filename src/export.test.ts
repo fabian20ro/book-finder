@@ -241,6 +241,13 @@ describe('formatBooksAsText', () => {
         expect(result).not.toContain('pages');
     });
 
+    it('omits page count when negative', () => {
+        // The "zero or negative" guard only emits "pages" when pageCount > 0;
+        // a negative count must behave like 0 — no "pages" segment in the row.
+        const result = formatBooksAsText([makeBook({ pageCount: -5 })]);
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890');
+    });
+
     it('omits page count when null', () => {
         const result = formatBooksAsText([makeBook({ pageCount: null })]);
         expect(result).not.toContain('pages');
