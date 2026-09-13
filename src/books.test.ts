@@ -145,6 +145,22 @@ describe('BookSearcher', () => {
             expect(notify).toHaveBeenCalledWith("API error: 404");
         });
 
+        it('keeps query in cache after non-429 error so identical queries are not retried', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse({}, 503));
+            const searcherWithNotify = new BookSearcher();
+
+            const results = await searcherWithNotify.search('service unavailable');
+
+            // Unlike the 429 path, the generic error path leaves the query
+            // cached, so an identical follow-up query short-circuits.
+            expect(results).toEqual([]);
+            expect((searcherWithNotify as any).queryCache.has('service unavailable')).toBe(true);
+
+            const retry = await searcherWithNotify.search('service unavailable');
+            expect(retry).toEqual([]);
+            expect(fetch).toHaveBeenCalledTimes(1);
+        });
+
         it('handles fetch error', async () => {
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
