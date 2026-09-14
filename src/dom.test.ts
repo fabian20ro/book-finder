@@ -98,6 +98,15 @@ describe('dom helpers', () => {
             expect(els).toEqual([]);
         });
 
+        it('returns a one-element array (not the bare node) for a single match', () => {
+            document.body.innerHTML = '<div class="solo">S</div>';
+            const els = $$('.solo');
+            expect(Array.isArray(els)).toBe(true);
+            expect(els).toHaveLength(1);
+            expect(els[0]).toBeInstanceOf(HTMLElement);
+            expect(els[0].textContent).toBe('S');
+        });
+
         it('throws DOMException for empty or malformed selector — no array is returned in that case', () => {
             // document.querySelectorAll throws for invalid CSS (empty string,
             // unclosed bracket). Unlike the valid-no-match case (empty array),

@@ -22,7 +22,11 @@ export function formatBooksAsText(books: Book[]): string {
             parts.push(`${book.pageCount} pages`);
         }
 
-        return parts.join(' | ');
+        let line = parts.join(' | ');
+        if (book.confidence > 0) {
+            line += ` (confidence ${book.confidence})`;
+        }
+        return line;
     });
 
     return lines.length > 0 ? header + '\n' + lines.join('\n') : header;
@@ -62,7 +66,7 @@ export async function shareBooks(books: Book[], notify: (msg: string) => void): 
 export function exportToCsv(books: Book[]): void {
     if (books.length === 0) return;
 
-    const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link';
+    const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link,Confidence';
     const rows = books.map((book) => {
         return [
             escapeCsv(book.title),
@@ -72,6 +76,7 @@ export function exportToCsv(books: Book[]): void {
             escapeCsv(book.publishedDate),
             escapeCsv(book.pageCount),
             escapeCsv(book.infoLink),
+            escapeCsv(book.confidence),
         ].join(',');
     });
 

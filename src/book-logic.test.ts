@@ -800,5 +800,15 @@ describe('Book logic', () => {
             expect(results[0].title).toBe('Fresh');
             vi.unstubAllGlobals();
         });
+
+        it('routes ISBN-shaped queries to the direct volume endpoint instead of a keyword search', async () => {
+            const searcher = new BookSearcher();
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) });
+            vi.stubGlobal('fetch', fetchMock);
+            await searcher.search('9780743276540');
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(fetchMock.mock.calls[0][0]).toBe('https://www.googleapis.com/books/v1/volumes/9780743276540');
+            vi.unstubAllGlobals();
+        });
     });
 });

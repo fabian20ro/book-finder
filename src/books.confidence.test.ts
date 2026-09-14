@@ -851,6 +851,14 @@ describe('Book scoring logic', () => {
       // 20 (title+authors) + ~7 (rating=3 → round(3/5*12)=7) + 0 (count=0 excluded) = 27.
       expect(computeConfidence(book, 3, 0, '')).toBe(27);
     });
+
+    it('clamps averageRating above 5 to the 12-point maximum', () => {
+      const book = mkBook({ id: 'partial-9', title: 'Some Book', authors: ['A'] });
+      // 20 (title+authors) + round(min(10,5)/5*12) = 12 → 32. Without the clamp the
+      // contribution would be round(10/5*12)=24 → 44; the full-baseBook clamp case is
+      // masked by the 100-point cap, so this uncapped book isolates the clamp itself.
+      expect(computeConfidence(book, 10, undefined, '')).toBe(32);
+    });
   });
 
   describe('isISBN', () => {

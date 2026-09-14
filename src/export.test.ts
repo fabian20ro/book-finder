@@ -76,7 +76,7 @@ describe('exportToCsv', () => {
         // Exact text — a failure pinpoints which row/field the CSV got wrong
         const text = await capturedBlob!.text();
         expect(text).toBe(
-            'Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link\nBook One,Author A,111,Publisher Co,2024-01-01,300,\nBook Two,Author A,222,Publisher Co,2024-01-01,300,'
+            'Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link,Confidence\nBook One,Author A,111,Publisher Co,2024-01-01,300,,75\nBook Two,Author A,222,Publisher Co,2024-01-01,300,,75'
         );
     });
 
@@ -88,10 +88,10 @@ describe('exportToCsv', () => {
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
         const lines = text.split('\n');
-        // header ends with the seventh column
-        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link');
-        // sample row carries the expected URL as the last field
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,https://books.google.com/books?id=abc123');
+        // header ends with the eighth column
+        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link,Confidence');
+        // sample row carries the expected URL, then the confidence score
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,https://books.google.com/books?id=abc123,75');
     });
 
     it('leaves the Info Link cell empty when infoLink is missing', async () => {
@@ -101,7 +101,7 @@ describe('exportToCsv', () => {
         const text = await capturedBlob!.text();
         const lines = text.split('\n');
         expect(lines[0]).toContain('Info Link');
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,,75');
     });
 
     it('quotes fields that contain carriage returns', async () => {
@@ -123,6 +123,25 @@ describe('exportToCsv', () => {
 
         expect(capturedBlob).not.toBeNull();
         await expect(capturedBlob!.text()).resolves.toContain('"A ""famous"" Book"');
+    });
+
+    it('includes a Confidence column with the book confidence score', async () => {
+        exportToCsv([makeBook({ confidence: 87 })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split('\n');
+        expect(lines[0]).toContain('Confidence');
+        expect(lines[1]).toContain(',87');
+    });
+
+    it('writes 0 in the Confidence cell when confidence is zero', async () => {
+        exportToCsv([makeBook({ confidence: 0 })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split('\n');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,,0');
     });
 
     it('quotes fields that contain commas', async () => {
@@ -149,7 +168,7 @@ describe('exportToCsv', () => {
         const text = await capturedBlob!.text();
         const lines = text.split(/\r?\n/);
         // authors join with ", " — the comma forces a quoted CSV cell
-        expect(lines[1]).toBe('Test Book,"Alice, Bob",9781234567890,Publisher Co,2024-01-01,300,');
+        expect(lines[1]).toBe('Test Book,"Alice, Bob",9781234567890,Publisher Co,2024-01-01,300,,75');
     });
 
     it('escapes double quotes in ISBN field', async () => {
@@ -173,9 +192,9 @@ describe('exportToCsv', () => {
 
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
-        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link\r?\n/);
+        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link,Confidence\r?\n/);
         const lines = text.split(/\r?\n/);
-        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300,');
+        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300,,75');
     });
 
     it('produces empty cells for null optional fields and "0" for zero page count', async () => {
@@ -184,8 +203,8 @@ describe('exportToCsv', () => {
 
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
-        // title, authors, empty isbn, empty publisher, empty date, "0" for zero page count, empty info link
-        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link\nTest Book,Author A,,,,0,');
+        // title, authors, empty isbn, empty publisher, empty date, "0" for zero page count, empty info link, default confidence
+        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link,Confidence\nTest Book,Author A,,,,0,,75');
     });
 
     it('produces an empty Authors field when authors array is empty', async () => {
@@ -218,22 +237,22 @@ describe('exportToCsv', () => {
 describe('formatBooksAsText', () => {
     it('formats a single book with title, authors, ISBN, and page count', () => {
         const result = formatBooksAsText([makeBook()]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)');
     });
 
     it('joins multiple authors with comma', () => {
         const result = formatBooksAsText([makeBook({ authors: ['Alice', 'Bob'] })]);
-        expect(result).toBe('# My Book Collection\nAlice, Bob - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(result).toBe('# My Book Collection\nAlice, Bob - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)');
     });
 
     it('uses "Unknown" when no authors', () => {
         const result = formatBooksAsText([makeBook({ authors: [] })]);
-        expect(result).toBe('# My Book Collection\nUnknown - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(result).toBe('# My Book Collection\nUnknown - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)');
     });
 
     it('omits ISBN when missing', () => {
         const result = formatBooksAsText([makeBook({ isbn: null })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | 300 pages');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | 300 pages (confidence 75)');
     });
 
     it('omits page count when zero or negative', () => {
@@ -245,7 +264,7 @@ describe('formatBooksAsText', () => {
         // The "zero or negative" guard only emits "pages" when pageCount > 0;
         // a negative count must behave like 0 — no "pages" segment in the row.
         const result = formatBooksAsText([makeBook({ pageCount: -5 })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 (confidence 75)');
     });
 
     it('omits page count when null', () => {
@@ -261,7 +280,7 @@ describe('formatBooksAsText', () => {
         const book2 = makeBook({ id: 'b1b', title: 'Beta', authors: ['Writer X'] });
         const result = formatBooksAsText([book1, book2]);
         expect(result).toBe(
-            '# My Book Collection\nAuthor A - Alpha | ISBN: 9781234567890 | 300 pages\nWriter X - Beta | ISBN: 9781234567890 | 300 pages'
+            '# My Book Collection\nAuthor A - Alpha | ISBN: 9781234567890 | 300 pages (confidence 75)\nWriter X - Beta | ISBN: 9781234567890 | 300 pages (confidence 75)'
         );
     });
 
@@ -282,7 +301,17 @@ describe('formatBooksAsText', () => {
 
     it('outputs only author-title when ISBN and page count are absent', () => {
         const result = formatBooksAsText([makeBook({ isbn: null, pageCount: 0 })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book (confidence 75)');
+    });
+
+    it('appends the confidence score when confidence is greater than zero', () => {
+        const result = formatBooksAsText([makeBook({ confidence: 55 })]);
+        expect(result).toContain('(confidence 55)');
+    });
+
+    it('omits the confidence suffix when confidence is zero', () => {
+        const result = formatBooksAsText([makeBook({ confidence: 0 })]);
+        expect(result).not.toContain('(confidence');
     });
 
     it('formats mixed-field books without cross-book leakage', () => {
@@ -324,7 +353,7 @@ describe('shareBooks', () => {
         await shareBooks([makeBook()], notify);
         expect(shareFn).toHaveBeenCalledWith({
             title: 'My Book Collection',
-            text: '# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages',
+            text: '# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)',
         });
     });
 
@@ -344,7 +373,7 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
-        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)');
         expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
     });
 
@@ -397,7 +426,7 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
-        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages');
+        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)');
         expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
     });
 
