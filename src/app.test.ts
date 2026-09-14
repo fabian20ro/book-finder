@@ -174,6 +174,20 @@ describe('app', () => {
         expect(getState().ocrLanguage).toBe('ron');
     });
 
+    it('restores a supported saved OCR language on startup', async () => {
+        localStorage.setItem('ftb-language', 'eng');
+
+        vi.resetModules();
+        capturedHandlers = null;
+        appModule = await import('./app');
+        // After resetModules the re-imported app uses a fresh state module;
+        // read state from that same instance (the top-level getState is stale).
+        const { getState: freshGetState } = await import('./state');
+        await new Promise((r) => setTimeout(r, 10));
+
+        expect(freshGetState().ocrLanguage).toBe('eng');
+    });
+
     it('preloads each restored book id into the BookSearcher cache', async () => {
         localStorage.setItem('ftb-books', JSON.stringify([
             { id: 'loaded-book-1', title: 'Loaded Book 1' },
