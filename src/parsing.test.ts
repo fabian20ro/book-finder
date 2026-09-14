@@ -160,6 +160,24 @@ describe('parsing stored books', () => {
         expect(result[1].confidence).toBe(100);
     });
 
+    it('rounds interior confidence values onto the 0 and 100 boundaries before clamping', () => {
+        const json = JSON.stringify([
+            { id: 'round-up-to-100', title: 'Rounds Up To 100', confidence: 99.6 },
+            { id: 'round-down-to-0', title: 'Rounds Down To 0', confidence: 0.4 },
+            { id: 'halfway-up', title: 'Halfway Up', confidence: 0.5 },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        // 99.6 is inside [0,100]; rounding (not clamping) pushes it onto the upper boundary
+        expect(result[0].confidence).toBe(100);
+        // 0.4 is inside [0,100]; rounding (not clamping) pulls it onto the lower boundary
+        expect(result[1].confidence).toBe(0);
+        // 0.5 rounds up to 1 (Math.round ties toward +infinity), a valid interior value
+        expect(result[2].confidence).toBe(1);
+    });
+
     it('keeps books with empty author arrays but returns them still', () => {
         const json = JSON.stringify([
             { id: 'all-whitespace-authors', title: 'Trimmed Authors', authors: ['  ', '', null, undefined] },

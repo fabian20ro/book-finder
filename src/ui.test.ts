@@ -367,6 +367,26 @@ describe('ui', () => {
             expect(link).toBeNull();
         });
 
+        it('falls back to no-cover placeholder when thumbnailUrl is unsafe', () => {
+            addBook(makeBook({ id: 'b1', title: 'Unsafe Cover Book', thumbnailUrl: 'javascript:void(0)' }));
+
+            const list = document.getElementById('home-book-list')!;
+            const coverImg = list.querySelector('.book-card img') as HTMLImageElement;
+            expect(coverImg).not.toBeNull();
+            expect(coverImg.src).toContain('data:image/svg+xml');
+            expect(coverImg.alt).toBe('No cover');
+        });
+
+        it('renders safe thumbnailUrl as the cover image', () => {
+            addBook(makeBook({ id: 'b1', title: 'Covered Book', thumbnailUrl: 'https://cdn.example.com/cover.png' }));
+
+            const list = document.getElementById('home-book-list')!;
+            const coverImg = list.querySelector('.book-card img') as HTMLImageElement;
+            expect(coverImg).not.toBeNull();
+            expect(coverImg.src).toContain('https://cdn.example.com/cover.png');
+            expect(coverImg.alt).toBe('Cover');
+        });
+
         it('updates book count text', () => {
             addBook(makeBook({ id: 'b1' }));
             expect(document.getElementById('home-book-count')!.textContent).toBe('1 book found');

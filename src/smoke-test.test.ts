@@ -517,3 +517,16 @@ test('addCandidates() inserts only the first of two same-id entries within one b
   expect(getState().candidateBooks[0].title).toBe('First Copy');
   off();
 });
+
+test('on() unsubscribe detaches the listener from future change events', () => {
+  let count = 0;
+  const off = on('change', () => { count++; });
+
+  update({ isScanning: true });
+  expect(count).toBe(1); // subscribed — first change notifies
+
+  off();
+
+  update({ isScanning: false }); // value actually changed, so update() emits
+  expect(count).toBe(1); // detached listener must NOT be notified
+});
