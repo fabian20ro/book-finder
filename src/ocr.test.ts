@@ -815,6 +815,41 @@ describe('TextRecognizer', () => {
             expect(mockWorker.recognize).toHaveBeenCalledOnce();
             expect(results).toEqual([{ text: 'Test', confidence: 80 }]);
         });
+
+        it('runs Tesseract on a dark frame when minFrameBrightness is not configured (opt-in default)', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Build a dark canvas (grayscale 10/255) — brightness ~10, below DEFAULT_MIN_FRAME_BRIGHTNESS=30.
+            const darkCanvas = document.createElement('canvas');
+            darkCanvas.width = 5;
+            darkCanvas.height = 5;
+            const dCtx = darkCanvas.getContext('2d')!;
+            const darkData = new Uint8ClampedArray(5 * 5 * 4);
+            for (let i = 0; i < darkData.length; i += 4) {
+                darkData[i] = 10;     // R
+                darkData[i + 1] = 10; // G
+                darkData[i + 2] = 10; // B
+                darkData[i + 3] = 255;// A
+            }
+            dCtx.putImageData({ data: new Uint8ClampedArray(darkData), width: 5, height: 5, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+
+            mockRecognize.mockResolvedValue({ data: { lines: [{ text: 'Dark', confidence: 90 }] } });
+
+            const results = await recognizer.recognize(darkCanvas);
+
+            // The dark-frame short-circuit is opt-in: without minFrameBrightness, Tesseract must still run.
+            expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
+            expect(results).toEqual([{ text: 'Dark', confidence: 90 }]);
+        });
     });
 });
 
