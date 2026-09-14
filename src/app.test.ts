@@ -152,15 +152,18 @@ describe('app', () => {
     });
 
     it('loads saved autoScan preference from localStorage', async () => {
-        localStorage.setItem('ftb-autoscan', 'false');
+        localStorage.setItem('ftb-autoscan', 'true');
 
         vi.resetModules();
         capturedHandlers = null;
         appModule = await import('./app');
+        // After resetModules the re-imported app uses a fresh state module;
+        // read state from that same instance (the top-level getState is stale).
+        const { getState: freshGetState } = await import('./state');
         await new Promise((r) => setTimeout(r, 10));
 
         expect(capturedHandlers).not.toBeNull();
-        expect(getState().autoScan).toBe(false);
+        expect(freshGetState().autoScan).toBe(true);
     });
 
     it('ignores unsupported saved OCR languages', async () => {
