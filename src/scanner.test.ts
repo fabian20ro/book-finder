@@ -161,6 +161,28 @@ describe('scanner', () => {
             expect(state.getState().candidateBooks[0].title).toBe('Found Book');
         });
 
+        it('drops the previous run timer and keeps one loop when startScanning is called again', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            // Restart-safe contract: a second start must drop the pending timer
+            // and visibility handler so a stale callback can never fire a scan.
+            startScanning(camera as any, ocr as any, books as any);
+            startScanning(camera as any, ocr as any, books as any);
+            await vi.advanceTimersByTimeAsync(2000);
+
+            // Exactly one scan fires — a stale (uncleared) timer would fire a second one.
+            expect(camera.captureFrame).toHaveBeenCalledTimes(1);
+            expect(ocr.recognize).toHaveBeenCalledTimes(1);
+            expect(state.getState().scanCount).toBe(1);
+
+            // The restarted loop keeps scheduling subsequent scans.
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalledTimes(2);
+        });
+
     describe('scanOnce (dark frame)', () => {
         beforeEach(() => {
             // Override frameBrightness to simulate dark conditions.
