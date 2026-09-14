@@ -111,6 +111,16 @@ describe('state', () => {
             expect(listener).toHaveBeenCalledTimes(1);
         });
 
+        it('compares values by reference, not content: same array reference does not emit, identical-content copy does', () => {
+            const current = getState().books;
+            const listener = vi.fn();
+            on('change', listener);
+            update({ books: current }); // same reference → no change
+            expect(listener).not.toHaveBeenCalled();
+            update({ books: [...current] }); // new reference, identical contents → change
+            expect(listener).toHaveBeenCalledTimes(1);
+        });
+
         it('updates view field', () => {
             update({ view: 'scan' });
             expect(getState().view).toBe('scan');
