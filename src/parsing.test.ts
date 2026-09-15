@@ -121,6 +121,11 @@ describe('parsing stored books', () => {
         expect(parseStoredBooks('"just a string"')).toEqual([]);
         expect(parseStoredBooks('42')).toEqual([]);
         expect(parseStoredBooks('[1, 2, "three"]')).toEqual([]);
+        // Top-level JSON null/boolean literals parse successfully (unlike
+        // whitespace-only input, which throws) but fail the Array.isArray
+        // check — a distinct branch from the !serialized early return
+        expect(parseStoredBooks('null')).toEqual([]);
+        expect(parseStoredBooks('true')).toEqual([]);
     });
 
     it('returns empty array for corrupted JSON', () => {
