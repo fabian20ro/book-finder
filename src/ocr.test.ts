@@ -156,6 +156,13 @@ describe('TextRecognizer', () => {
             await recognizer.destroy();
         });
 
+        it('throws the exact not-initialized message when verifyReadiness is called before init', async () => {
+            const recognizer = new TextRecognizer();
+            // verifyReadiness's not-initialized branch is failure-specific: unlike
+            // recognize()/setWhitelist() it omits the "Call init() first." hint.
+            await expect(recognizer.verifyReadiness()).rejects.toThrow(/^TextRecognizer not initialized\.$/);
+        });
+
         it('destroys the worker on destroy', async () => {
             const mockWorker = {
                 recognize: vi.fn(),
