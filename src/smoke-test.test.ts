@@ -173,6 +173,25 @@ test('addBook() normalizes whitespace-only fields to null', () => {
   expect(state.books[0].isbn).toBeNull();
 });
 
+test('addBook() trims padded thumbnailUrl/infoLink and collapses whitespace-only ones to null', () => {
+  const book: Book = {
+    id: 'url-trim', title: 'Url Book', authors: ['Author'],
+    publisher: null, publishedDate: null, description: null, isbn: null,
+    pageCount: null,
+    thumbnailUrl: '   https://example.com/thumb.jpg   ',
+    infoLink: '   ',
+    confidence: 0,
+  };
+
+  const ok = addBook(book);
+
+  expect(ok).toBe(true);
+  const added = getState().books[0];
+  // padded URL is trimmed; whitespace-only infoLink collapses to null (normalizeBook)
+  expect(added.thumbnailUrl).toBe('https://example.com/thumb.jpg');
+  expect(added.infoLink).toBeNull();
+});
+
 test('removeBook(index) deletes book, emits change, returns removed book', () => {
   const off = on('change', () => {});
 
