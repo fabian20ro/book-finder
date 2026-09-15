@@ -159,6 +159,8 @@ describe('scanner', () => {
 
             expect(state.getState().candidateBooks).toHaveLength(1);
             expect(state.getState().candidateBooks[0].title).toBe('Found Book');
+            // Auto-scan success branch: adds candidates AND toasts the found count.
+            expect(state.toast).toHaveBeenCalledWith('Found 1 book(s)');
         });
 
         it('drops the previous run timer and keeps one loop when startScanning is called again', async () => {
