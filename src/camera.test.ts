@@ -142,6 +142,18 @@ describe('CameraManager', () => {
             expect(canvas.height).toBe(1080);
         });
 
+        it('wires the acquired MediaStream to the video element', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            // start() must attach the resolved MediaStream to the video element
+            // (camera.ts assigns this.video.srcObject = this.stream). No existing
+            // test asserts this positive wiring — only stop() asserts srcObject is
+            // nulled afterwards — so a regression that drops the assignment would
+            // otherwise pass the whole suite.
+            expect(video.srcObject).toBe(mockStream.stream);
+        });
+
         it('registers disconnect handler on video track', async () => {
             const onDisconnect = vi.fn();
             const camera = new CameraManager(video, canvas);

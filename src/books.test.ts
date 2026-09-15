@@ -185,6 +185,23 @@ describe('BookSearcher', () => {
             expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(SyntaxError));
         });
 
+        it('handles 200 response with valid JSON null body gracefully', async () => {
+            // Valid JSON but null payload: response.json() resolves, then
+            // property access on data throws — a different path than
+            // malformed JSON, which is rejected by json() itself.
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve(null),
+            }));
+
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const results = await searcher.search('null json body');
+
+            expect(results).toEqual([]);
+            expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(TypeError));
+        });
+
         it('handles response with no items', async () => {
             vi.stubGlobal('fetch', mockFetchResponse({}));
             const results = await searcher.search('empty query');
