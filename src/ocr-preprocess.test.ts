@@ -584,6 +584,29 @@ describe('ocr utilities', () => {
             expect(result[1].text).toBe('hello world');
         });
 
+        it('honors custom minLineLength and minLineConfidence options over defaults', async () => {
+            // recognize() filters via `minLineLength ?? 3` and `minLineConfidence ?? 40`.
+            // Existing tests only exercise the defaults; this verifies the option-override
+            // path: higher custom thresholds must drop lines the defaults would keep.
+            // If the option were ignored and the defaults won, 'hello' (len 5, conf 50)
+            // would be kept and this assertion would fail.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: 'hello', confidence: 50 },        // kept by defaults, dropped by overrides
+                        { text: 'exactly five', confidence: 95 }  // kept by overrides
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+            (recognizer as any).options = { minLineLength: 12, minLineConfidence: 90 };
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toHaveLength(1);
+            expect(result[0].text).toBe('exactly five');
+            expect(result[0].confidence).toBe(95);
+        });
+
         it('drops lines with non-string or missing text and lines missing confidence (defaults to 0)', async () => {
             // The filter pipeline guarantees callers only see well-formed lines:
             //   1. lines whose `text` is not a string (or is missing entirely) are excluded
