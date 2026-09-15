@@ -510,6 +510,17 @@ describe('state', () => {
             expect(listener).toHaveBeenCalled();
         });
 
+        it('resets candidateFilter and emits change when clearing books', () => {
+            addBook(makeBook({ id: 'a' }));
+            update({ candidateFilter: 'some filter' });
+            const listener = vi.fn();
+            on('change', listener);
+            clearBooks();
+            expect(getState().books).toEqual([]);
+            expect(getState().candidateFilter).toBe('');
+            expect(listener).toHaveBeenCalledTimes(1);
+        });
+
         it('trims whitespace from id and title during addBook', () => {
             addBook(makeBook({ id: '  dup-1  ', title: '  Title 1  ' }));
             addBook(makeBook({ id: 'dup-2', title: 'Title 2' }));
