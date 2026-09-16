@@ -41,6 +41,13 @@ describe('dom helpers', () => {
             expect(el).toBe(document.querySelector('#sv'));
             expect(el).not.toBeInstanceOf(HTMLElement);
         });
+
+        it('returns the first matching element when multiple elements match the selector', () => {
+            document.body.innerHTML = '<div class="multi">1</div><div class="multi">2</div>';
+            const el = $('.multi');
+            expect(el).toBe(document.querySelector('.multi'));
+            expect(el.textContent).toBe('1');
+        });
     });
 
     describe('$as', () => {
@@ -79,6 +86,21 @@ describe('dom helpers', () => {
             const el = $as('#v', HTMLElement);
             expect(el).toBe(document.querySelector('#v'));
             expect(el).toBeInstanceOf(HTMLElement);
+        });
+
+        it('returns the actual DOM node, not a clone or wrapper', () => {
+            document.body.innerHTML = '<video id="n"></video>';
+            const el = $as('#n', HTMLVideoElement);
+            expect(el).toBe(document.querySelector('#n'));
+        });
+
+        it('reports the SVG tag name in the type-mismatch error', () => {
+            document.body.innerHTML = '<svg id="s"></svg>';
+            // SVG elements are not instanceof HTMLElement, so the instanceof
+            // check fails and the error must report the actual tag: SVG.
+            expect(() => $as('#s', HTMLVideoElement)).toThrow(
+                'Element for "#s" is not an instance of HTMLVideoElement (found SVG)',
+            );
         });
     });
 
@@ -157,6 +179,14 @@ describe('dom helpers', () => {
             const els = $$('.live');
             els[0].textContent = 'changed';
             expect(document.querySelector('.live')!.textContent).toBe('changed');
+        });
+
+        it('returns the same node references as querySelectorAll (per-element identity, not copies)', () => {
+            document.body.innerHTML = '<a class="l">1</a><a class="l">2</a>';
+            const els = $$('.l');
+            const expected = Array.from(document.querySelectorAll('.l'));
+            expect(els).toHaveLength(expected.length);
+            els.forEach((el, i) => expect(el).toBe(expected[i]));
         });
     });
 
