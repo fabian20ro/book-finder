@@ -679,6 +679,28 @@ describe('ui', () => {
             expect(badges[1].classList.contains('confidence-mid')).toBe(true);
             expect(badges[2].classList.contains('confidence-low')).toBe(true);
         });
+
+        it('applies confidence class at threshold boundaries (70/40)', () => {
+            addCandidates([
+                makeBook({ id: 'c1', confidence: 70 }),
+                makeBook({ id: 'c2', confidence: 69 }),
+                makeBook({ id: 'c3', confidence: 40 }),
+                makeBook({ id: 'c4', confidence: 39 }),
+            ]);
+            const badges = Array.from(document.querySelectorAll<HTMLElement>('.confidence-badge'));
+            expect(badges).toHaveLength(4);
+            // Sorted descending: 70, 69, 40, 39
+            // 70 >= 70 -> high (boundary included)
+            expect(badges[0].classList.contains('confidence-high')).toBe(true);
+            // 69 < 70, >= 40 -> mid
+            expect(badges[1].classList.contains('confidence-high')).toBe(false);
+            expect(badges[1].classList.contains('confidence-mid')).toBe(true);
+            // 40 >= 40 -> mid (boundary included)
+            expect(badges[2].classList.contains('confidence-mid')).toBe(true);
+            // 39 < 40 -> low
+            expect(badges[3].classList.contains('confidence-mid')).toBe(false);
+            expect(badges[3].classList.contains('confidence-low')).toBe(true);
+        });
     });
 
     describe('candidate search filter', () => {
