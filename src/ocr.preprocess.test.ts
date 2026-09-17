@@ -261,6 +261,33 @@ describe('preprocessCanvas', () => {
         }
     });
 
+    it('should clamp sharpened values to exactly 0 when the pre-clamp value is negative', () => {
+        // All existing clamp tests only assert that outputs stay within [0,255]; none of them
+        // prove the clamp branch (v < 0 ? 0) actually fires. This fixture makes the center
+        // pixel of a 3x1 strip dark (grayscale 20) while all eight clamped neighbors are 230.
+        // After contrast stretch (range 0 -> values unchanged), the 3x3 blur of the center
+        // pixel is 215, so the pre-clamp value is 20 + 1 * (20 - 215) = -175. Only the inline
+        // clamp forces the output to exactly 0; a regression dropping the clamp would wrap
+        // -175 to 255 in the Uint8Array, which a range assertion alone would also miss.
+        mockCtx.data[0]     = 230;
+        mockCtx.data[1]     = 230;
+        mockCtx.data[2]     = 230;
+        mockCtx.data[3]     = 255;
+        mockCtx.data[4]     = 230;
+        mockCtx.data[5]     = 230;
+        mockCtx.data[6]     = 230;
+        mockCtx.data[7]     = 255;
+        mockCtx.data[8]     = 20;
+        mockCtx.data[9]     = 20;
+        mockCtx.data[10]    = 20;
+        mockCtx.data[11]    = 255;
+
+        const result = preprocessCanvas(canvas, 1);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 1).data!;
+
+        expect(data[8]).toBe(0);
+    });
+
     describe('frameBrightness', () => {
         it('should return 128 when getContext returns null (fallback)', () => {
             vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
