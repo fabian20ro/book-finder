@@ -48,6 +48,13 @@ describe('dom helpers', () => {
             expect(el).toBe(document.querySelector('.multi'));
             expect(el.textContent).toBe('1');
         });
+
+        it('searches the entire document, not just document.body — elements outside body are found', () => {
+            // beforeEach clears only document.body.innerHTML; head and html are untouched.
+            // $ delegates to document.querySelector, so document-scoped elements must be reachable.
+            expect($('head')).toBe(document.head);
+            expect($('html')).toBe(document.documentElement);
+        });
     });
 
     describe('$as', () => {
@@ -79,6 +86,14 @@ describe('dom helpers', () => {
 
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
+        });
+
+        it('delegates the missing-element error to $ with the exact quoted-selector message', () => {
+            // $as performs its existence check via $, so a missing element must surface
+            // $'s full message (with the selector in quotes), not a distinct $as message.
+            expect(() => $as('#missing', HTMLVideoElement)).toThrow(
+                'Required DOM element not found: "#missing"',
+            );
         });
 
         it('accepts a derived element when a base constructor is requested (instanceof follows the prototype chain)', () => {
@@ -172,6 +187,16 @@ describe('dom helpers', () => {
             expect(els[0].textContent).toBe('third');
             expect(els[1].textContent).toBe('first');
             expect(els[2].textContent).toBe('second');
+        });
+
+        it('matches ancestor and descendant elements for a broad selector — document order puts the ancestor first', () => {
+            document.body.innerHTML = '<div class="wrap"><div class="wrap">inner</div></div>';
+            const els = $$('.wrap');
+            expect(els).toHaveLength(2);
+            // querySelectorAll yields nested matches in document order: the outer
+            // ancestor precedes the inner descendant it contains.
+            expect(els[0].contains(els[1])).toBe(true);
+            expect(els[1].textContent).toBe('inner');
         });
 
         it('returns live DOM references — mutating an element via the array mutates the document', () => {
