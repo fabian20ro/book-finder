@@ -66,7 +66,7 @@ export async function shareBooks(books: Book[], notify: (msg: string) => void): 
 export function exportToCsv(books: Book[]): void {
     if (books.length === 0) return;
 
-    const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count,Info Link,Confidence';
+    const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence';
     const rows = books.map((book) => {
         return [
             escapeCsv(book.title),
@@ -75,6 +75,7 @@ export function exportToCsv(books: Book[]): void {
             escapeCsv(book.publisher),
             escapeCsv(book.publishedDate),
             escapeCsv(book.pageCount),
+            escapeCsv(book.description),
             escapeCsv(book.infoLink),
             escapeCsv(book.confidence),
         ].join(',');
