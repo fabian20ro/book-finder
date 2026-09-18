@@ -297,6 +297,28 @@ describe('preprocessCanvas', () => {
             expect(brightness).toBe(128); // Default fallback value
         });
 
+        it('should return 128 for an empty frame via the count===0 branch (distinct from the null-context fallback)', () => {
+            // frameBrightness has two independent paths that both yield the 128 fallback:
+            //   (a) getContext() === null        -> early `return 128` (covered by the test above)
+            //   (b) a valid context, zero pixels -> the `count > 0 ? sum / count : 128` ternary's
+            //                                        else branch (count stays 0, loop never runs)
+            // This fixture exercises path (b) specifically: getContext returns the mock (not null)
+            // but the frame has no pixel data, so a regression dropping the `count > 0` guard would
+            // surface 0/0 as NaN here — which the null-context test alone cannot detect.
+            mockCtx.data = new Uint8ClampedArray(0); // zero pixels
+            canvas.width = 0;
+            canvas.height = 0;
+
+            const brightness = frameBrightness(canvas);
+
+            expect(brightness).toBe(128);
+
+            // Restore shared fixture state so subsequent tests are unaffected.
+            mockCtx.data = new Uint8ClampedArray(36);
+            canvas.width = 3;
+            canvas.height = 3;
+        });
+
         it('should return average brightness for uniform white canvas', () => {
             // All pixels at 255 (white)
             for (let i = 0; i < mockCtx.data.length; i += 4) {
