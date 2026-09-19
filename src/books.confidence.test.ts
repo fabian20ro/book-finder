@@ -65,6 +65,11 @@ describe('Book scoring logic', () => {
     expect(getConfidenceLevel(40)).toBe('Medium');
     expect(getConfidenceLevel(10)).toBe('Low');
     expect(getConfidenceLevel(0)).toBe('None');
+    // Boundary: the High threshold is `score >= 80`, so 80 must be High and 79
+    // must be Medium. Existing 90/40 cases pass a `> 80` implementation too, so
+    // without these the threshold direction is unobservable.
+    expect(getConfidenceLevel(80)).toBe('High');
+    expect(getConfidenceLevel(79)).toBe('Medium');
   });
 
   it('getConfidenceColor returns correct colors', () => {
