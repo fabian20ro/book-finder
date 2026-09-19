@@ -1125,6 +1125,15 @@ describe('ui', () => {
                 vi.useRealTimers();
             }
         });
+
+        it('renders the toast message as plain text and does not parse HTML', () => {
+            showToast('<b>bold</b> & "quoted"');
+
+            const toast = document.querySelector('.toast') as HTMLElement;
+            expect(toast).not.toBeNull();
+            expect(toast.textContent).toBe('<b>bold</b> & "quoted"');
+            expect(toast.querySelector('b')).toBeNull();
+        });
     });
 
     describe('element accessors', () => {
