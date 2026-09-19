@@ -96,6 +96,17 @@ describe('dom helpers', () => {
             );
         });
 
+        it('propagates $’s raw DOMException for a malformed selector — the instanceof check never runs', () => {
+            // A malformed selector makes document.querySelector throw a DOMException
+            // inside $ before $as ever reaches its instanceof check. This path is
+            // distinct from the missing-element case (valid selector, no match), which
+            // throws a plain Error with a descriptive message. The malformed path must
+            // surface the raw DOMException — not a "Required DOM element not found"
+            // message and not a type-mismatch message.
+            expect(() => $as('[', HTMLVideoElement)).toThrow(DOMException);
+            expect(() => $as('[', HTMLVideoElement)).not.toThrow('Required DOM element not found');
+        });
+
         it('accepts a derived element when a base constructor is requested (instanceof follows the prototype chain)', () => {
             document.body.innerHTML = '<video id="v"></video>';
             const el = $as('#v', HTMLElement);
