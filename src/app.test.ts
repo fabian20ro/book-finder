@@ -638,6 +638,13 @@ describe('app', () => {
         await capturedHandlers.onLanguageChange('eng');
 
         expect(localStorage.getItem('ftb-language')).toBe('eng');
+        // A successful switch must also record usage so the picker can rank languages.
+        expect(JSON.parse(localStorage.getItem('ftb-lang-usage')!)).toEqual({ eng: 1 });
+
+        // A second switch accumulates rather than overwriting the previous count.
+        await capturedHandlers.onLanguageChange('fra');
+
+        expect(JSON.parse(localStorage.getItem('ftb-lang-usage')!)).toEqual({ eng: 1, fra: 1 });
     });
 
     it('does not call scanOnce when manual scan has no camera', async () => {
