@@ -15,6 +15,9 @@ export function formatBooksAsText(books: Book[]): string {
         const authors = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown';
         const parts: string[] = [`${authors} - ${book.title}`];
 
+        if (book.publisher) {
+            parts.push(`Publisher: ${book.publisher}`);
+        }
         if (book.isbn) {
             parts.push(`ISBN: ${book.isbn}`);
         }
