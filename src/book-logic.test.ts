@@ -292,8 +292,11 @@ describe('Book logic', () => {
         it('returns correct confidence levels', () => {
             expect(getConfidenceLevel(100)).toBe('High');
             expect(getConfidenceLevel(80)).toBe('High');
+            expect(getConfidenceLevel(79)).toBe('Medium');
             expect(getConfidenceLevel(40)).toBe('Medium');
+            expect(getConfidenceLevel(39)).toBe('Low');
             expect(getConfidenceLevel(10)).toBe('Low');
+            expect(getConfidenceLevel(1)).toBe('Low');
             expect(getConfidenceLevel(0)).toBe('None');
         });
     });
