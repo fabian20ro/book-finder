@@ -634,6 +634,20 @@ describe('app', () => {
         expect(mockRecognize).not.toHaveBeenCalled();
     });
 
+    it('rejects non-image file types with a toast and no processing', async () => {
+        let emittedMessage = '';
+        const { on } = await import('./state');
+        on('toast', (msg: string) => { emittedMessage = msg; });
+
+        const file = new File(['text content'], 'notes.txt', { type: 'text/plain' });
+        Object.defineProperty(file, 'size', { value: 1024 });
+
+        await capturedHandlers.onImageUpload(file);
+
+        expect(emittedMessage).toBe('Only image files are supported.');
+        expect(mockRecognize).not.toHaveBeenCalled();
+    });
+
     it('persists language and increments usage on successful switch', async () => {
         await capturedHandlers.onLanguageChange('eng');
 
