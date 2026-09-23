@@ -353,6 +353,10 @@ describe('BookSearcher', () => {
             expect(fetch).toHaveBeenCalledTimes(1);
             const [url] = (fetch as any).mock.calls[0];
             expect(url).toContain('q=');
+            // The general-search endpoint caps results at 10 via maxResults —
+            // the URL tail is the only observable output of that branch's URL
+            // construction, so pin it here to catch a changed/dropped cap.
+            expect(url).toContain('&maxResults=10');
         });
 
         it('deduplicates volume IDs within a single search response', async () => {

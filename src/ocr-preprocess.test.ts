@@ -584,6 +584,25 @@ describe('ocr utilities', () => {
             expect(result[1].text).toBe('hello world');
         });
 
+        it('measures minLineLength against trimmed text, not raw text', async () => {
+            // The recognize() pipeline trims each line (map) before the length filter runs,
+            // so the length check sees the trimmed value. A line whose raw text is long enough
+            // to pass the default minLineLength (3) but whose trimmed text is not must still be
+            // dropped. The nearest existing test only feeds lines with no surrounding whitespace,
+            // so it cannot distinguish a raw-length check from a trimmed-length check.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: '    ab    ', confidence: 90 }  // raw length 10 >= 3, trims to 'ab' (length 2 < 3) -> dropped
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toHaveLength(0);
+        });
+
         it('honors custom minLineLength and minLineConfidence options over defaults', async () => {
             // recognize() filters via `minLineLength ?? 3` and `minLineConfidence ?? 40`.
             // Existing tests only exercise the defaults; this verifies the option-override
