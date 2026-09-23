@@ -224,6 +224,14 @@ describe('dom helpers', () => {
             expect(els).toHaveLength(expected.length);
             els.forEach((el, i) => expect(el).toBe(expected[i]));
         });
+
+        it('returns non-HTMLElement (SVG) nodes as-is — the HTMLElement[] return type is a type-level cast, not a runtime filter', () => {
+            document.body.innerHTML = '<svg class="svg2"></svg>';
+            const els = $$('.svg2');
+            expect(els).toHaveLength(1);
+            expect(els[0]).toBe(document.querySelector('.svg2'));
+            expect(els[0]).not.toBeInstanceOf(HTMLElement);
+        });
     });
 
     describe('getContext2D', () => {
