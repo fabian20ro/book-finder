@@ -623,6 +623,31 @@ describe('CameraManager', () => {
             expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: true });
         });
 
+        it('keeps the computed hasVideoDevice and warns nothing when the Permissions API has no query function', async () => {
+            // The Permissions API object may exist while query() is not a function on some
+            // platforms — the inner guard (camera.ts line 121) skips the query and keeps the
+            // default canRequestPermission=true. Unlike the enumerateDevices-rejection fallback
+            // below — which forces hasVideoDevice:false and logs a warning — this branch must
+            // return the computed device result (true) and log nothing.
+            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'videoinput', deviceId: 'cam1' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: {},
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: true });
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+
         it('returns safe defaults when enumerateDevices rejects', async () => {
             vi.stubGlobal('navigator', {
                 ...navigator,
