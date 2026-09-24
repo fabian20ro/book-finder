@@ -519,6 +519,38 @@ describe('TextRecognizer', () => {
             ]);
         });
 
+        it('passes the preprocessed canvas to the Tesseract worker, not the raw input', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            mockRecognize.mockResolvedValue({
+                data: {
+                    lines: [{ text: 'Processed', confidence: 90 }],
+                },
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            await recognizer.recognize(canvas);
+
+            // Every existing recognize test lets the worker mock ignore its argument,
+            // so a regression that hands the raw input canvas to Tesseract (bypassing
+            // preprocessCanvas) would still pass. The worker must receive the
+            // preprocessed canvas: a distinct canvas element of the same dimensions.
+            expect(mockRecognize).toHaveBeenCalledTimes(1);
+            const processed = mockRecognize.mock.calls[0][0];
+            expect(processed).toBeInstanceOf(HTMLCanvasElement);
+            expect(processed).not.toBe(canvas);
+            expect(processed.width).toBe(canvas.width);
+            expect(processed.height).toBe(canvas.height);
+        });
+
         it('filters lines based on custom minLineLength and minLineConfidence', async () => {
             const mockRecognize = vi.fn();
             const mockWorker = {
