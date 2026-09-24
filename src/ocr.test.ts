@@ -280,6 +280,30 @@ describe('TextRecognizer', () => {
             expect((recognizer as any).worker).toBe(workerRef);
         });
 
+        it('retries worker creation when setLanguage matches the current language but no worker is live', async () => {
+            // The same-language fast path requires a live worker (lang === currentLang && worker).
+            // After a failed init, currentLang reflects the attempted language but no worker is
+            // live, so setLanguage must re-create the worker instead of silently no-op-ing.
+            vi.mocked(Tesseract.createWorker).mockRejectedValue(new Error('cdn offline'));
+
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.init('ron')).rejects.toThrow('cdn offline');
+            expect(recognizer.getLanguage()).toBe('ron');
+
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn().mockResolvedValue(undefined),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            await recognizer.setLanguage('ron');
+
+            expect(Tesseract.createWorker).toHaveBeenCalledTimes(2);
+            expect(Tesseract.createWorker).toHaveBeenLastCalledWith('ron');
+            expect((recognizer as any).worker).toBe(mockWorker);
+        });
+
         it('successfully sets language to an existing one', async () => {
             const mockWorker = {
                 recognize: vi.fn(),
