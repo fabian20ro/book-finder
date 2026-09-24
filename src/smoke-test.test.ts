@@ -1,5 +1,5 @@
 import { expect, test, beforeEach } from 'vitest';
-import { getState, update, on, toast, addBook, removeBook, clearBooks, setView, addCandidates, removeCandidateById, clearAll, clearCandidates, moveBook, type Book } from './state';
+import { getState, getBooks, update, on, toast, addBook, removeBook, clearBooks, setView, addCandidates, removeCandidateById, clearAll, clearCandidates, moveBook, type Book } from './state';
 
 beforeEach(() => {
   // reset state fields to defaults — module-level state persists across tests
@@ -190,6 +190,15 @@ test('addBook() trims padded thumbnailUrl/infoLink and collapses whitespace-only
   // padded URL is trimmed; whitespace-only infoLink collapses to null (normalizeBook)
   expect(added.thumbnailUrl).toBe('https://example.com/thumb.jpg');
   expect(added.infoLink).toBeNull();
+});
+
+test('getBooks() reflects books added via addBook', () => {
+  addBook({ id: 'sel-1', title: 'Selected', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const books = getBooks();
+  expect(books).toHaveLength(1);
+  expect(books[0].id).toBe('sel-1');
+  expect(books[0].title).toBe('Selected');
 });
 
 test('removeBook(index) deletes book, emits change, returns removed book', () => {
