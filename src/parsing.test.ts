@@ -567,6 +567,24 @@ describe('parsing stored books', () => {
         expect(result).toHaveLength(0);
     });
 
+    it('rejects entry with valid id but non-string title (type check)', () => {
+        const json = JSON.stringify([
+            // title is a number — typeof !== 'string' → rejected despite valid id
+            { id: 'num-title', title: 12345 },
+            // title is a boolean — typeof !== 'string' → rejected
+            { id: 'bool-title', title: true },
+            // title is null — typeof 'object' !== 'string' → rejected (distinct from missing)
+            { id: 'null-title', title: null as any },
+            // Valid string title survives alongside the invalid ones
+            { id: 'ok-title', title: 'Real Book' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('ok-title');
+    });
+
     it('handles omitted optional fields with correct defaults', () => {
         const json = JSON.stringify([
             { id: 'minimal-book', title: 'Minimal Book' },
