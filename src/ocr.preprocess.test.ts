@@ -288,6 +288,34 @@ describe('preprocessCanvas', () => {
         expect(data[8]).toBe(0);
     });
 
+    it('should clamp sharpened values to exactly 255 when the pre-clamp value is positive (upper-clamp branch)', () => {
+        // Symmetric to the exactly-0 test above: the existing clamp tests only assert that
+        // outputs stay within [0,255] (range-only), so none of them prove the upper clamp
+        // branch (v > 255 ? 255) actually fires. This fixture makes the center pixel of a 3x3
+        // frame bright (grayscale 255) while all eight neighbors are dark (grayscale 0).
+        // After contrast stretch the center stays 255 and the blur of its 3x3 neighborhood is
+        // 255/9, so the pre-clamp sharpen value is 255 + 1 * (255 - 255/9) ~ 481.7. Only the
+        // inline upper clamp forces the output to exactly 255; a regression dropping it would
+        // let the Uint8Array wrap 482 -> 226, which a range-only assertion cannot detect.
+        for (let i = 0; i < 9; i++) {
+            const v = i === 4 ? 255 : 0; // center bright, all neighbors dark
+            const idx = i * 4;
+            mockCtx.data[idx]     = v;
+            mockCtx.data[idx + 1] = v;
+            mockCtx.data[idx + 2] = v;
+            mockCtx.data[idx + 3] = 255;
+        }
+
+        const result = preprocessCanvas(canvas, 1);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        // Center pixel (index 4) must be the clamped 255, not the wrapped 226.
+        expect(data[4 * 4]).toBe(255);
+        // A dark corner is pulled by the bright center but its pre-clamp value is negative,
+        // so the lower clamp keeps it at 0 — confirming the center is isolated from edge wrap.
+        expect(data[0 * 4]).toBe(0);
+    });
+
     describe('frameBrightness', () => {
         it('should return 128 when getContext returns null (fallback)', () => {
             vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);

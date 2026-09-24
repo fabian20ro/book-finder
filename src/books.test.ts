@@ -65,6 +65,19 @@ describe('BookSearcher', () => {
             expect(fetch).not.toHaveBeenCalled();
         });
 
+        it('searches when the query is exactly 2 characters long', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(
+                googleBooksResponse([volume('v-two', 'AI Book', ['Alice'], '9781234567890')]),
+            ));
+
+            const results = await searcher.search('ai');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            expect(results).toHaveLength(1);
+            expect(results[0].id).toBe('v-two');
+            // Full metadata (50) + perfect query match (30) = 80.
+            expect(results[0].confidence).toBe(80);
+        });
+
         it('skips duplicate queries (case-insensitive)', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v1', 'Book')])));
 

@@ -491,9 +491,14 @@ describe('Book scoring logic', () => {
   it('BookSearcher notifies on non-429 HTTP errors and returns empty array', async () => {
     // Lines 177-180 of books.ts: any non-ok response (other than 429) calls notify with the status,
     // then returns []. A spy confirms notify receives a message containing the actual HTTP status.
+    // Unlike the 429 branch (which deletes the query so it can be retried), a failed non-429
+    // query stays in the query cache — a second identical call must short-circuit at the cache
+    // check and never re-fetch.
     const notify = vi.fn();
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false, status: 503, json: async () => ({}),
+    let fetchCalls = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      fetchCalls++;
+      return { ok: false, status: 503, json: async () => ({}) };
     }) as any;
 
     try {
@@ -501,6 +506,10 @@ describe('Book scoring logic', () => {
       const results = await searcher.search('any');
       expect(results).toEqual([]);
       expect(notify).toHaveBeenCalledWith("API error: 503");
+      // The failed query remains cached: a repeat call must not fetch again.
+      const retry = await searcher.search('any');
+      expect(retry).toEqual([]);
+      expect(fetchCalls).toBe(1);
     } finally {
       globalThis.fetch = vi.fn() as any;
     }

@@ -74,6 +74,10 @@ function makeBook(id: string, title: string): state.Book {
 describe('scanner', () => {
     beforeEach(() => {
         vi.useFakeTimers();
+        // Clear the shared toast mock: it is a vi.fn() from the module mock
+        // factory (not a spyOn), so vi.restoreAllMocks() never resets it —
+        // call-count assertions need a clean slate per test.
+        (state.toast as any).mockClear();
         // Reset state
         state.update({
             books: [],
@@ -223,6 +227,9 @@ describe('scanner', () => {
 
             expect(state.getState().scanCount).toBe(1);
             expect(state.getState().candidateBooks).toHaveLength(1);
+            // scanOnce success is silent — no toast (unlike auto-scan scanFrame which toasts "Found N book(s)").
+            // Regression: copying scanFrame's success toast into scanOnce would be caught here.
+            expect(state.toast).not.toHaveBeenCalled();
         });
 
         it('fails when camera fails to capture frame', async () => {

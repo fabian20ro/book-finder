@@ -76,7 +76,7 @@ describe('exportToCsv', () => {
         // Exact text — a failure pinpoints which row/field the CSV got wrong
         const text = await capturedBlob!.text();
         expect(text).toBe(
-            'Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence\nBook One,Author A,111,Publisher Co,2024-01-01,300,A description,,75\nBook Two,Author A,222,Publisher Co,2024-01-01,300,A description,,75'
+            'Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL\nBook One,Author A,111,Publisher Co,2024-01-01,300,A description,,75,\nBook Two,Author A,222,Publisher Co,2024-01-01,300,A description,,75,'
         );
     });
 
@@ -88,10 +88,10 @@ describe('exportToCsv', () => {
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
         const lines = text.split('\n');
-        // header ends with the eighth column
-        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence');
-        // sample row carries the expected URL, then the confidence score
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,https://books.google.com/books?id=abc123,75');
+        // header ends with the ninth column
+        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL');
+        // sample row carries the expected URL, then the confidence score, then an empty thumbnail cell
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,https://books.google.com/books?id=abc123,75,');
     });
 
     it('leaves the Info Link cell empty when infoLink is missing', async () => {
@@ -101,7 +101,7 @@ describe('exportToCsv', () => {
         const text = await capturedBlob!.text();
         const lines = text.split('\n');
         expect(lines[0]).toContain('Info Link');
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,75');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,75,');
     });
 
     it('quotes fields that contain carriage returns', async () => {
@@ -141,7 +141,7 @@ describe('exportToCsv', () => {
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
         const lines = text.split('\n');
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,0');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,0,');
     });
 
     it('quotes fields that contain commas', async () => {
@@ -168,7 +168,7 @@ describe('exportToCsv', () => {
         const text = await capturedBlob!.text();
         const lines = text.split(/\r?\n/);
         // authors join with ", " — the comma forces a quoted CSV cell
-        expect(lines[1]).toBe('Test Book,"Alice, Bob",9781234567890,Publisher Co,2024-01-01,300,A description,,75');
+        expect(lines[1]).toBe('Test Book,"Alice, Bob",9781234567890,Publisher Co,2024-01-01,300,A description,,75,');
     });
 
     it('escapes double quotes in ISBN field', async () => {
@@ -192,9 +192,9 @@ describe('exportToCsv', () => {
 
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
-        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence\r?\n/);
+        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL\r?\n/);
         const lines = text.split(/\r?\n/);
-        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300,A description,,75');
+        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300,A description,,75,');
     });
 
     it('produces empty cells for null optional fields and "0" for zero page count', async () => {
@@ -204,7 +204,7 @@ describe('exportToCsv', () => {
         expect(capturedBlob).not.toBeNull();
         const text = await capturedBlob!.text();
         // title, authors, empty isbn, empty publisher, empty date, "0" for zero page count, description, empty info link, default confidence
-        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence\nTest Book,Author A,,,,0,A description,,75');
+        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL\nTest Book,Author A,,,,0,A description,,75,');
     });
 
     it('produces an empty Authors field when authors array is empty', async () => {
@@ -240,8 +240,8 @@ describe('exportToCsv', () => {
         const text = await capturedBlob!.text();
         const lines = text.split(/\r?\n/);
         // Description is the 7th column, between Page Count and Info Link
-        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence');
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A novel about cats,,75');
+        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A novel about cats,,75,');
     });
 
     it('leaves the Description cell empty when description is null', async () => {
@@ -252,9 +252,33 @@ describe('exportToCsv', () => {
         const lines = text.split(/\r?\n/);
         // Description (7th) is empty — no "null"/"undefined" text in the output
         expect(lines[0]).toContain('Description');
-        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,,,75');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,,,75,');
         expect(text).not.toContain('null');
         expect(text).not.toContain('undefined');
+    });
+
+    it('includes a Thumbnail URL column with the book thumbnail URL as the last field', async () => {
+        exportToCsv([
+            makeBook({ thumbnailUrl: 'https://covers.example.com/cover.jpg' }),
+        ]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split('\n');
+        // Thumbnail URL is the 10th and last column — after Confidence
+        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,75,https://covers.example.com/cover.jpg');
+    });
+
+    it('leaves the Thumbnail URL cell empty when thumbnailUrl is null', async () => {
+        exportToCsv([makeBook({ thumbnailUrl: null })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split('\n');
+        // The 10th cell is empty — the row ends with a trailing comma
+        expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL');
+        expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,75,');
     });
 });
 

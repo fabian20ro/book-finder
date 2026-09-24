@@ -172,9 +172,12 @@ describe('app', () => {
         vi.resetModules();
         capturedHandlers = null;
         appModule = await import('./app');
+        // After resetModules the re-imported app uses a fresh state module;
+        // read state from that same instance (the top-level getState is stale).
+        const { getState: freshGetState } = await import('./state');
         await new Promise((r) => setTimeout(r, 10));
 
-        expect(getState().ocrLanguage).toBe('ron');
+        expect(freshGetState().ocrLanguage).toBe('ron');
     });
 
     it('restores a supported saved OCR language on startup', async () => {
@@ -631,6 +634,20 @@ describe('app', () => {
         await capturedHandlers.onImageUpload(largeFile);
 
         expect(emittedMessage).toBe('File too large. Max size is 10 MB.');
+        expect(mockRecognize).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-image file types with a toast and no processing', async () => {
+        let emittedMessage = '';
+        const { on } = await import('./state');
+        on('toast', (msg: string) => { emittedMessage = msg; });
+
+        const file = new File(['text content'], 'notes.txt', { type: 'text/plain' });
+        Object.defineProperty(file, 'size', { value: 1024 });
+
+        await capturedHandlers.onImageUpload(file);
+
+        expect(emittedMessage).toBe('Only image files are supported.');
         expect(mockRecognize).not.toHaveBeenCalled();
     });
 
