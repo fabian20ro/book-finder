@@ -1,5 +1,12 @@
 # Iteration Log
 
+## 2026-09-25 — Remove duplicate getter test
+
+Removed the smoke-file getBooks/addBook assertion duplicated by state.test.ts.
+Retained the original contract test and production behavior. Full isolated Linux
+local-green passed all three checks. Lesson: search sibling tests before equating
+symbol absence in one file with missing behavioral coverage.
+
 > Append-only journal of AI agent work sessions.
 > **Add an entry at the end of every iteration.**
 > Same issue 2+ times? Promote to `LESSONS_LEARNED.md`.
