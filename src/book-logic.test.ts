@@ -813,5 +813,15 @@ describe('Book logic', () => {
             expect(fetchMock.mock.calls[0][0]).toBe('https://www.googleapis.com/books/v1/volumes/9780743276540');
             vi.unstubAllGlobals();
         });
+
+        it('routes a hyphenated ISBN to the direct volume endpoint using the original query', async () => {
+            const searcher = new BookSearcher();
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) });
+            vi.stubGlobal('fetch', fetchMock);
+            await searcher.search('978-0743-27654-0');
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(fetchMock.mock.calls[0][0]).toBe('https://www.googleapis.com/books/v1/volumes/978-0743-27654-0');
+            vi.unstubAllGlobals();
+        });
     });
 });

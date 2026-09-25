@@ -585,14 +585,28 @@ describe('parsing stored books', () => {
         expect(result[0].id).toBe('ok-title');
     });
 
-    it('handles omitted optional fields with correct defaults', () => {
+    it('handles omitted and whitespace-only optional fields with correct defaults', () => {
         const json = JSON.stringify([
             { id: 'minimal-book', title: 'Minimal Book' },
+            // Whitespace-only optional fields (never empty strings) must not
+            // drop the book — it is kept with every optional field defaulted.
+            {
+                id: 'minimal-2',
+                title: 'Whitespace Optional Book',
+                authors: '   ',
+                publisher: '\t\n',
+                publishedDate: '   ',
+                description: '\u00a0',
+                isbn: '  ',
+                pageCount: '  ',
+                thumbnailUrl: '\r\n',
+                infoLink: '    ',
+            },
         ]);
 
         const result = parseStoredBooks(json);
 
-        expect(result).toHaveLength(1);
+        expect(result).toHaveLength(2);
         // All optional string fields default to null when omitted
         expect(result[0].authors).toEqual([]);
         expect(result[0].publisher).toBe(null);
@@ -604,6 +618,29 @@ describe('parsing stored books', () => {
         expect(result[0].infoLink).toBe(null);
         // confidence defaults to 0 when omitted (null → ?? 0)
         expect(result[0].confidence).toBe(0);
+
+        // Book with whitespace-only optional fields is still kept
+        expect(result[1].id).toBe('minimal-2');
+        expect(result[1].title).toBe('Whitespace Optional Book');
+        // Non-array authors → empty fallback
+        expect(result[1].authors).toEqual([]);
+        // Whitespace-only strings trim to '' → null, same shape as omitted fields
+        expect(result[1].publisher).toBe(null);
+        expect(result[1].publishedDate).toBe(null);
+        // U+00A0 is whitespace in JS trim() → null
+        expect(result[1].description).toBe(null);
+        expect(result[1].isbn).toBe(null);
+        // String fails the positive-integer check → null
+        expect(result[1].pageCount).toBe(null);
+        expect(result[1].thumbnailUrl).toBe(null);
+        expect(result[1].infoLink).toBe(null);
+        expect(result[1].confidence).toBe(0);
+        // Normalized key shape is identical to the omitted-fields entry
+        expect(Object.keys(result[1])).toEqual([
+            'id', 'title', 'authors', 'publisher', 'publishedDate',
+            'description', 'isbn', 'pageCount', 'thumbnailUrl',
+            'infoLink', 'confidence',
+        ]);
     });
 
     it('handles books with some optional fields present and others omitted', () => {

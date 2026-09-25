@@ -495,6 +495,38 @@ describe('preprocessCanvas', () => {
 
             expect(brightness).toBe(100); // only the 421 even-indexed (sampled) pixels contribute
         });
+
+        it('should use the full sampling stride in the higher pixel-count band (50x50 -> every 6th pixel)', () => {
+            // The 29x29 step test above uses a period-2 pattern, which yields the same average
+            // whether the stride is 2 pixels or 4 pixels — so a halved divisor (400 -> 200)
+            // would survive it. This fixture uses 50x50 (2500 pixels), where the true stride is
+            // floor(2500/400) = 6 pixels, with a period-4 pattern: sampled pixel p = 6k has
+            // p ≡ 2k (mod 4), so k even -> 100, k odd -> 250. Only the true stride-6 sampling
+            // produces the (209 at 100, 208 at 250) split below; a halved divisor (stride 12,
+            // all p ≡ 0 mod 4 -> 100), a doubled divisor (stride 3 -> ~212.4), or full
+            // scanning (~212.5) all land far from the asserted average.
+            canvas.width = 50;
+            canvas.height = 50;
+            const pixels = 50 * 50; // 2500
+            mockCtx.data = new Uint8ClampedArray(pixels * 4);
+            for (let p = 0; p < pixels; p++) {
+                const v = p % 4 === 0 ? 100 : 250;
+                mockCtx.data[p * 4]     = v;
+                mockCtx.data[p * 4 + 1] = v;
+                mockCtx.data[p * 4 + 2] = v;
+                mockCtx.data[p * 4 + 3] = 255;
+            }
+
+            const brightness = frameBrightness(canvas);
+
+            // stride 24 bytes samples p = 0,6,...,2496: 417 samples, 209 at 100 (k even), 208 at 250 (k odd).
+            expect(brightness).toBe((209 * 100 + 208 * 250) / 417);
+
+            // Restore shared fixture state so subsequent tests are unaffected.
+            mockCtx.data = new Uint8ClampedArray(36);
+            canvas.width = 3;
+            canvas.height = 3;
+        });
     });
 
     it('should apply documented grayscale coefficients to non-uniform RGB input', () => {

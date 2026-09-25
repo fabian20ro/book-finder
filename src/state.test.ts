@@ -521,6 +521,15 @@ describe('state', () => {
             expect(listener).toHaveBeenCalledTimes(1);
         });
 
+        it('is idempotent — safe to call when already empty', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            clearBooks();
+            // clearBooks emits change unconditionally (direct emit, not via update),
+            // so it fires exactly once even when books and candidateFilter are already cleared.
+            expect(listener).toHaveBeenCalledTimes(1);
+        });
+
         it('trims whitespace from id and title during addBook', () => {
             addBook(makeBook({ id: '  dup-1  ', title: '  Title 1  ' }));
             addBook(makeBook({ id: 'dup-2', title: 'Title 2' }));

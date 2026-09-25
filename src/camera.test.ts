@@ -227,6 +227,21 @@ describe('CameraManager', () => {
             await expect(camera.start()).rejects.toThrow('Could not access camera. Ensure no other app is using it.');
         });
 
+        it('throws the general error when the rejection is a non-DOMException named NotAllowedError', async () => {
+            // Some platforms reject with a plain Error whose name is set to
+            // 'NotAllowedError'. The instanceof DOMException guard in start()
+            // (camera.ts) must exclude such rejections from the permission-denied
+            // branch — otherwise users are told to re-allow camera access for a
+            // different failure. A regression that drops the instanceof check
+            // would pass every existing start() error test but fail this one.
+            const err = new Error('Access not allowed');
+            err.name = 'NotAllowedError';
+            (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(err);
+
+            const camera = new CameraManager(video, canvas);
+            await expect(camera.start()).rejects.toThrow('Could not access camera. Ensure no other app is using it.');
+        });
+
         it('resolves immediately when video readyState >= 2 without waiting for loadedmetadata event', async () => {
             // Override the mock's srcObject setter to synchronously set readyState=2,
             // triggering the immediate-resolution branch (line 45-46 in camera.ts).

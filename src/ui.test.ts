@@ -1010,6 +1010,19 @@ describe('ui', () => {
             expect(handlers.onDismissCandidates).toHaveBeenCalled();
         });
 
+        it('calls onDismissCandidates when Escape is pressed on the popup', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+
+            const popup = document.getElementById('book-popup')!;
+            expect(popup.hidden).toBe(false);
+
+            // Route through the real DOM event path, not the handler directly
+            const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+            popup.dispatchEvent(event);
+
+            expect(handlers.onDismissCandidates).toHaveBeenCalledTimes(1);
+        });
+
         it('calls onDismissCandidates when backdrop clicked', () => {
             addCandidates([makeBook({ id: 'c1' })]);
 

@@ -800,6 +800,50 @@ describe('scanner', () => {
             expect(camera.captureFrame).toHaveBeenCalled();
         });
 
+        it('recovers the scan loop when withTimeout rejects a hung OCR frame after 10s', async () => {
+            state.update({ autoScan: true });
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            // Hang recognize: never settles, so only withTimeout's 10s timer can reject.
+            (ocr.recognize as any).mockImplementation(
+                () => new Promise(() => {}),
+            );
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            // First interval: frame captured, brightness passes, OCR runs and hangs.
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(ocr.recognize).toHaveBeenCalledTimes(1);
+
+            // With the 10s timeout, the first scan is still blocked (no second capture).
+            await vi.advanceTimersByTimeAsync(8000);
+            expect(ocr.resetProcessing).not.toHaveBeenCalled();
+            expect(camera.captureFrame).toHaveBeenCalledTimes(1);
+
+            // The timeout fires at exactly 10s (8000 + 2000 = 10000, not earlier).
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(ocr.resetProcessing).toHaveBeenCalledTimes(1);
+            expect(state.toast).toHaveBeenCalledWith(
+                'OCR timed out — retrying on next scan.',
+            );
+            // Failure-specific: scanFrame passes its own label to handleScanError,
+            // distinct from scanOnce's 'Scan once error:' — a regression that swaps
+            // the label (or drops the OCR-timeout branch) would be caught here.
+            expect(consoleSpy).toHaveBeenCalledWith(
+                'Scan frame error:',
+                expect.any(Error),
+            );
+            // scanCount is unchanged — the scan never completed.
+            expect(state.getState().scanCount).toBe(0);
+
+            // scheduleNext runs unconditionally after the error, so the loop resumes.
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalledTimes(2);
+        });
+
         it('recovers the scan loop after ocr.verifyReadiness rejects', async () => {
             state.update({ autoScan: true });
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

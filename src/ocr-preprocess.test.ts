@@ -101,6 +101,26 @@ describe('ocr utilities', () => {
             expect(resultData[16]).toBeCloseTo(128, 0);
         });
 
+        it('contrast-stretches a non-full-range input to the full 0-255 span (strength=0 isolates the stretch)', () => {
+            // Existing stretch-adjacent tests only use full-range (0/128/255) or uniform
+            // (range=0) inputs, where the min-max stretch is a no-op and cannot catch a
+            // missing or mis-scaled stretch. Here the input luminances span [100, 200]
+            // (range=100), so the stretch must rescale min → 0 and max → 255.
+            // strength=0 keeps sharpening a no-op, isolating the stretch branch itself:
+            // a stretch regression would leave the output at 100/200 and fail both assertions.
+            canvas.width = 2;
+            canvas.height = 1;
+            const data = new Uint8ClampedArray([
+                100, 100, 100, 255,
+                200, 200, 200, 255
+            ]);
+            mockCtx.putImageData(new ImageData(data, 2, 1));
+            const result = preprocessCanvas(canvas, 0);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 2, 1).data;
+            expect(resultData[0]).toBe(0);
+            expect(resultData[4]).toBe(255);
+        });
+
         it('handles high strength', () => {
             canvas.width = 3;
             canvas.height = 3;
