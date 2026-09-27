@@ -789,6 +789,11 @@ describe('computeConfidence', () => {
     it('adds rating points for ratingsCount', () => {
         const withoutCount = computeConfidence(makeBookData());
         const withCount = computeConfidence(makeBookData(), undefined, 50);
+        // ratingsCount=50 → Math.round((Math.min(50,100)/100)*8) = 4, so
+        // full metadata (50) + 4 = 54. Assert the exact value: a wrong divisor
+        // such as /50 would yield 58, still > withoutCount (50), so the
+        // toBeGreaterThan range below alone cannot catch that regression.
+        expect(withCount).toBe(54);
         expect(withCount).toBeGreaterThan(withoutCount);
     });
 
