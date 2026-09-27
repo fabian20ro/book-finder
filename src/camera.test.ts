@@ -268,6 +268,25 @@ describe('CameraManager', () => {
             // because readyState was already >= 2 so the immediate-resolution branch is taken.
             expect(video.addEventListener).not.toHaveBeenCalledWith('loadedmetadata', expect.any(Function));
         });
+
+        it('registers a one-time loadedmetadata listener when video is not yet ready', async () => {
+            // The default mock leaves readyState at 0 when start() runs — the microtask that
+            // sets readyState=2 fires after the synchronous check (camera.ts line 51) — so the
+            // else-branch registers a loadedmetadata listener with { once: true } (line 54).
+            // Existing tests pin only the readyState >= 2 branch (no listener); a regression
+            // that drops the { once: true } option would leak a duplicate listener on every
+            // stop/start cycle without failing the suite, and dropping the registration
+            // entirely would hang start().
+            vi.spyOn(video, 'addEventListener');
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            expect(video.addEventListener).toHaveBeenCalledWith(
+                'loadedmetadata',
+                expect.any(Function),
+                { once: true },
+            );
+        });
     });
 
     describe('captureFrame', () => {
