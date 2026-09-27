@@ -684,6 +684,22 @@ describe('Book logic', () => {
             vi.unstubAllGlobals();
         });
 
+        it('deduplicates a repeated query with different casing or surrounding whitespace into a single API call', async () => {
+            const searcher = new BookSearcher();
+            const fetchMock = vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ items: [] }),
+            });
+            vi.stubGlobal('fetch', fetchMock);
+            await searcher.search('  Hello World  ');
+            const second = await searcher.search('hello world');
+            expect(second).toEqual([]);
+            // Same logical query — the normalized cache key must prevent a second API call
+            // (Google Books quota: 1000 requests/day).
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            vi.unstubAllGlobals();
+        });
+
         it('search handles a successful response with no items field', async () => {
             const notify = vi.fn();
             const searcher = new BookSearcher(notify);
