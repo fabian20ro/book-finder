@@ -70,6 +70,9 @@ describe('Book scoring logic', () => {
     // without these the threshold direction is unobservable.
     expect(getConfidenceLevel(80)).toBe('High');
     expect(getConfidenceLevel(79)).toBe('Medium');
+    // Boundary: the Medium threshold is `score >= 40`, so 40 is Medium (above)
+    // and 39 must be Low. Existing 10/40 cases pass a `>= 39` regression too.
+    expect(getConfidenceLevel(39)).toBe('Low');
   });
 
   it('getConfidenceColor returns correct colors', () => {
