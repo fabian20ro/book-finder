@@ -283,24 +283,24 @@ describe('exportToCsv', () => {
 });
 
 describe('formatBooksAsText', () => {
-    it('formats a single book with title, authors, ISBN, and page count', () => {
+    it('formats a single book with title, authors, ISBN, publication date, and page count', () => {
         const result = formatBooksAsText([makeBook()]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)');
     });
 
     it('joins multiple authors with comma', () => {
         const result = formatBooksAsText([makeBook({ authors: ['Alice', 'Bob'] })]);
-        expect(result).toBe('# My Book Collection\nAlice, Bob - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)');
+        expect(result).toBe('# My Book Collection\nAlice, Bob - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)');
     });
 
     it('uses "Unknown" when no authors', () => {
         const result = formatBooksAsText([makeBook({ authors: [] })]);
-        expect(result).toBe('# My Book Collection\nUnknown - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)');
+        expect(result).toBe('# My Book Collection\nUnknown - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)');
     });
 
     it('omits ISBN when missing', () => {
         const result = formatBooksAsText([makeBook({ isbn: null })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | 300 pages (confidence 75)');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | Published: 2024-01-01 | 300 pages (confidence 75)');
     });
 
     it('omits page count when zero or negative', () => {
@@ -312,7 +312,7 @@ describe('formatBooksAsText', () => {
         // The "zero or negative" guard only emits "pages" when pageCount > 0;
         // a negative count must behave like 0 — no "pages" segment in the row.
         const result = formatBooksAsText([makeBook({ pageCount: -5 })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 (confidence 75)');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 (confidence 75)');
     });
 
     it('omits page count when null', () => {
@@ -328,7 +328,7 @@ describe('formatBooksAsText', () => {
         const book2 = makeBook({ id: 'b1b', title: 'Beta', authors: ['Writer X'] });
         const result = formatBooksAsText([book1, book2]);
         expect(result).toBe(
-            '# My Book Collection\nAuthor A - Alpha | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)\nWriter X - Beta | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)'
+            '# My Book Collection\nAuthor A - Alpha | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)\nWriter X - Beta | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)'
         );
     });
 
@@ -349,7 +349,7 @@ describe('formatBooksAsText', () => {
 
     it('outputs only author-title when ISBN and page count are absent', () => {
         const result = formatBooksAsText([makeBook({ isbn: null, pageCount: 0 })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co (confidence 75)');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | Published: 2024-01-01 (confidence 75)');
     });
 
     it('appends the confidence score when confidence is greater than zero', () => {
@@ -364,7 +364,19 @@ describe('formatBooksAsText', () => {
 
     it('omits the publisher segment when publisher is null', () => {
         const result = formatBooksAsText([makeBook({ publisher: null })]);
-        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | 300 pages (confidence 75)');
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)');
+    });
+
+    it('includes the publication date between ISBN and page count', () => {
+        const result = formatBooksAsText([makeBook({ publishedDate: '2024-01-15' })]);
+        expect(result).toContain('Published: 2024-01-15');
+        // Segment order: authors-title | Publisher | ISBN | Published | page count, confidence after the last pipe segment
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-15 | 300 pages (confidence 75)');
+    });
+
+    it('omits the Published segment when publishedDate is null', () => {
+        const result = formatBooksAsText([makeBook({ publishedDate: null })]);
+        expect(result).not.toContain('Published:');
     });
 
     it('formats mixed-field books without cross-book leakage', () => {
@@ -406,7 +418,7 @@ describe('shareBooks', () => {
         await shareBooks([makeBook()], notify);
         expect(shareFn).toHaveBeenCalledWith({
             title: 'My Book Collection',
-            text: '# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)',
+            text: '# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)',
         });
     });
 
@@ -426,7 +438,7 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
-        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)');
+        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)');
         expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
     });
 
@@ -479,7 +491,7 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
-        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | 300 pages (confidence 75)');
+        expect(writeText).toHaveBeenCalledWith('# My Book Collection\nAuthor A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages (confidence 75)');
         expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
     });
 

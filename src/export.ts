@@ -21,6 +21,9 @@ export function formatBooksAsText(books: Book[]): string {
         if (book.isbn) {
             parts.push(`ISBN: ${book.isbn}`);
         }
+        if (book.publishedDate) {
+            parts.push(`Published: ${book.publishedDate}`);
+        }
         if (book.pageCount != null && book.pageCount > 0) {
             parts.push(`${book.pageCount} pages`);
         }
