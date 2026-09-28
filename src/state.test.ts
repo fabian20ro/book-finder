@@ -261,6 +261,19 @@ describe('state', () => {
             expect(book.thumbnailUrl).toBe('https://example.com/thumb.jpg');
             expect(book.infoLink).toBe('https://example.com/book');
         });
+
+        it('preserves internal whitespace runs in thumbnailUrl and infoLink (trim, not collapse)', () => {
+            // URL fields are normalized with .trim() only, unlike text fields which
+            // use collapseWhitespace. An internal multi-space run must therefore
+            // survive — only surrounding whitespace is removed.
+            addBook(makeBook({
+                thumbnailUrl: '  https://example.com/thumb   v2  ',
+                infoLink: '  https://example.com/book   page  ',
+            }));
+            const [book] = getState().books;
+            expect(book.thumbnailUrl).toBe('https://example.com/thumb   v2');
+            expect(book.infoLink).toBe('https://example.com/book   page');
+        });
     });
 
     describe('removeBook', () => {
