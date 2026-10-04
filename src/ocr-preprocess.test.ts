@@ -604,6 +604,30 @@ describe('ocr utilities', () => {
             expect(result[1].text).toBe('hello world');
         });
 
+        it('keeps lines at exactly the default minLineConfidence and drops lines just below (boundary check)', async () => {
+            // The confidence filter is `confidence >= (minLineConfidence ?? 40)`. Existing
+            // tests only exercise confidences far from the default (80/10/95, 50/95), so
+            // an off-by-one regression that flips >= to > would still pass them all. This
+            // pins the boundary: a line at exactly 40 must be kept, one at 39 must drop.
+            const mockWorker = {
+                recognize: vi.fn().mockResolvedValue({
+                    data: { lines: [
+                        { text: 'just below', confidence: 39 },
+                        { text: 'at the boundary', confidence: 40 },
+                        { text: 'well above', confidence: 90 }
+                    ]}
+                })
+            };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toHaveLength(2);
+            expect(result[0].text).toBe('at the boundary');
+            expect(result[0].confidence).toBe(40);
+            expect(result[1].text).toBe('well above');
+            expect(result[1].confidence).toBe(90);
+        });
+
         it('measures minLineLength against trimmed text, not raw text', async () => {
             // The recognize() pipeline trims each line (map) before the length filter runs,
             // so the length check sees the trimmed value. A line whose raw text is long enough

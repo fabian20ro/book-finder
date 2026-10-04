@@ -10,7 +10,9 @@ function escapeCsv(field: string | number | null): string {
 }
 
 export function formatBooksAsText(books: Book[]): string {
-    const header = '# My Book Collection';
+    const count = books.length;
+    const suffix = count === 1 ? ' (1 book)' : count > 1 ? ` (${count} books)` : '';
+    const header = `# My Book Collection${suffix}`;
     const lines = books.map((book) => {
         const authors = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown';
         const parts: string[] = [`${authors} - ${book.title}`];
