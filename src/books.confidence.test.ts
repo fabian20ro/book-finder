@@ -876,6 +876,15 @@ describe('Book scoring logic', () => {
       // masked by the 100-point cap, so this uncapped book isolates the clamp itself.
       expect(computeConfidence(book, 10, undefined, '')).toBe(32);
     });
+
+    it('clamps ratingsCount above 100 to the 8-point maximum', () => {
+      const book = mkBook({ id: 'partial-10', title: 'Some Book', authors: ['A'] });
+      // 20 (title+authors) + round(min(1000,100)/100*8) = 8 → 28. Without the clamp the
+      // contribution would be round(1000/100*8)=80 → 100; the full-baseBook 1000-count
+      // case is masked by the 100-point cap, so this uncapped book isolates the clamp
+      // itself — a poorly documented book with a large rating pool must not over-score.
+      expect(computeConfidence(book, undefined, 1000, '')).toBe(28);
+    });
   });
 
   describe('isISBN', () => {
