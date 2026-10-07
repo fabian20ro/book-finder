@@ -571,6 +571,49 @@ describe('ui', () => {
         });
     });
 
+    describe('copy-ISBN button', () => {
+        let clipboardWriteText: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            clipboardWriteText = vi.fn(() => Promise.resolve());
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: clipboardWriteText },
+                configurable: true,
+            });
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('renders a copy-ISBN button only for books with a non-empty ISBN', () => {
+            addBook(makeBook({ id: 'with-isbn', isbn: '9781234567890' }));
+            addBook(makeBook({ id: 'no-isbn', isbn: '' }));
+            const cards = document
+                .getElementById('home-book-list')!
+                .querySelectorAll<HTMLElement>('.book-card');
+
+            expect(cards[0].querySelector('.btn-copy-isbn')).not.toBeNull();
+            expect(cards[0].querySelector<HTMLElement>('.btn-copy-isbn')!.dataset.index).toBe('0');
+            expect(cards[0].querySelector('.btn-copy-isbn')!.getAttribute('aria-label')).toBe('Copy ISBN');
+            expect(cards[1].querySelector('.btn-copy-isbn')).toBeNull();
+        });
+
+        it('copies the ISBN to the clipboard and shows a toast when the button is clicked', async () => {
+            addBook(makeBook({ id: 'b1', isbn: '9781234567890' }));
+            const btn = document.querySelector<HTMLElement>('.btn-copy-isbn')!;
+            expect(btn).not.toBeNull();
+
+            btn.click();
+            await Promise.resolve();
+
+            expect(clipboardWriteText).toHaveBeenCalledWith('9781234567890');
+            const toasts = document.querySelectorAll<HTMLElement>('.toast');
+            expect(toasts.length).toBeGreaterThan(0);
+            expect(Array.from(toasts).some(t => t.textContent!.includes('9781234567890'))).toBe(true);
+        });
+    });
+
     describe('error overlay', () => {
         it('shows error message', () => {
             showError('Something went wrong');

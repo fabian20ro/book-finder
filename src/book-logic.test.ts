@@ -803,6 +803,30 @@ describe('Book logic', () => {
             vi.unstubAllGlobals();
         });
 
+        it('parseBook stores null thumbnailUrl when thumbnail is an empty string', async () => {
+            const searcher = new BookSearcher();
+            // Distinct branch from the absent-imageLinks case: imageLinks is present but its
+            // thumbnail is an empty string. The `|| null` fallback must coerce the falsy
+            // empty string to null (Book.thumbnailUrl is string | null, never undefined).
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    items: [{
+                        id: 'vol-empty-thumb',
+                        volumeInfo: {
+                            title: 'Empty Thumb Book',
+                            authors: ['X'],
+                            imageLinks: { thumbnail: '' },
+                        },
+                    }],
+                }),
+            }));
+            const results = await searcher.search('Empty Thumb Book');
+            expect(results).toHaveLength(1);
+            expect(results[0].thumbnailUrl).toBeNull();
+            vi.unstubAllGlobals();
+        });
+
         it('search deduplicates preloaded books across multiple calls', async () => {
             const searcher = new BookSearcher();
             const notify = vi.fn();
