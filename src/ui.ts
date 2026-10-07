@@ -197,9 +197,24 @@ export function initUI(handlers: UIHandlers): void {
         }
     });
 
-    // Remove individual book (event delegation on home book list)
+    // Remove individual book / copy ISBN (event delegation on home book list)
     homeBookList.addEventListener('click', (e: Event) => {
-        const btn = (e.target as HTMLElement).closest('.btn-remove') as HTMLElement | null;
+        const target = e.target as HTMLElement;
+
+        const copyBtn = target.closest('.btn-copy-isbn') as HTMLElement | null;
+        if (copyBtn) {
+            const index = parseInt(copyBtn.dataset.index!, 10);
+            const book = index >= 0 && index < getState().books.length ? getState().books[index] : undefined;
+            if (book && book.isbn) {
+                void navigator.clipboard.writeText(book.isbn).then(
+                    () => showToast(`ISBN copied: ${book.isbn}`),
+                    () => showToast('Could not copy ISBN'),
+                );
+            }
+            return;
+        }
+
+        const btn = target.closest('.btn-remove') as HTMLElement | null;
         if (!btn) return;
         const index = parseInt(btn.dataset.index!, 10);
         if (index >= 0 && index < getState().books.length) {
@@ -531,6 +546,11 @@ function renderHomeBookList(): void {
                     <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                 </svg>
             </button>
+            ${book.isbn ? `<button class="btn-copy-isbn" data-index="${index}" title="Copy ISBN" aria-label="Copy ISBN">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                </svg>
+            </button>` : ''}
         </div>`;
     }).join('');
 }
