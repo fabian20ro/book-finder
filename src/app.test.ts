@@ -222,6 +222,20 @@ describe('app', () => {
         expect(consoleError).toHaveBeenCalledWith('Language change failed:', expect.any(Error));
     });
 
+    it('is a no-op when switching to the already-active language', async () => {
+        const { getState: freshGetState } = await import('./state');
+        const active = freshGetState().ocrLanguage; // default is 'ron'
+
+        await capturedHandlers.onLanguageChange(active);
+
+        // Re-selecting the active language must be an early return: no OCR reload,
+        // no redundant pref write, and no phantom usage increment to the picker ranking.
+        expect(mockSetLanguage).not.toHaveBeenCalled();
+        expect(freshGetState().ocrLanguage).toBe(active);
+        expect(localStorage.getItem('ftb-language')).toBeNull();
+        expect(localStorage.getItem('ftb-lang-usage')).toBeNull();
+    });
+
     it('normalizes stored language usage before returning it', () => {
         localStorage.setItem('ftb-lang-usage', JSON.stringify({
             eng: 3,
