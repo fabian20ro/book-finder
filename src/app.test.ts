@@ -701,9 +701,13 @@ describe('app', () => {
 
     it('shows a toast and does not call shareBooks when there are no books', async () => {
         const { shareBooks } = await import('./export');
+        let emittedMessage = '';
+        const { on } = await import('./state');
+        on('toast', (msg: string) => { emittedMessage = msg; });
 
         capturedHandlers.onShare();
 
+        expect(emittedMessage).toBe('No books to share');
         expect(shareBooks).not.toHaveBeenCalled();
     });
 
