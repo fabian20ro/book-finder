@@ -739,6 +739,20 @@ describe('ocr utilities', () => {
             expect((recognizer as any).isProcessing).toBe(false);
         });
 
+        it('throws the invalid-result error (not a dereference TypeError) when the worker resolves to null', async () => {
+            // recognize() guards `!result || !result.data`; the existing test only feeds
+            // a data-less object ({}), so the `!result` half is unexercised. A regression
+            // that drops the `!result ||` short-circuit and dereferences `result.data`
+            // would throw "Cannot read properties of null" instead of the documented
+            // invalid-result error, and this assertion would fail on the message.
+            const mockWorker = { recognize: vi.fn().mockResolvedValue(null) };
+            (recognizer as any).worker = mockWorker;
+
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('Tesseract recognition returned invalid result');
+            expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
+            expect((recognizer as any).isProcessing).toBe(false);
+        });
+
         it('sets isProcessing back to false after recognize completes', async () => {
             // The finally block in recognize() must reset isProcessing so subsequent calls work.
             // A lingering true value would block all future OCR on that recognizer instance.
