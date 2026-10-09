@@ -370,6 +370,23 @@ test('moveBook() with out-of-bounds index is a no-op', () => {
   off();
 });
 
+test('moveBook() with non-integer index is a no-op and does not emit', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  addBook({ id: 'n1', title: 'N1', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'n2', title: 'N2', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  emitted = false; // reset after addBook's own emits
+
+  moveBook(1.5, 0);
+
+  // splice would truncate 1.5 to 1 if the Number.isInteger guard were absent —
+  // asserting both order AND no-emit pins the guard's intent
+  expect(getState().books.map((b) => b.id)).toEqual(['n1', 'n2']);
+  expect(emitted).toBe(false);
+  off();
+});
+
 test('moveBook() emits change event', () => {
   let emitted = false;
   const off = on('change', () => { emitted = true; });
