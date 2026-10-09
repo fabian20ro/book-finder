@@ -372,6 +372,17 @@ describe('BookSearcher', () => {
             expect(url).toContain('&maxResults=10');
         });
 
+        it('sends the original untrimmed query to the search endpoint for padded input', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([])));
+
+            await searcher.search('  hello world  ');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            // The search branch encodes the raw `query` parameter (not `trimmed`),
+            // so surrounding whitespace is URL-encoded and preserved in the request.
+            expect(url).toContain('q=%20%20hello%20world%20%20');
+        });
+
         it('deduplicates volume IDs within a single search response', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
                 volume('v1', 'First Book'),
