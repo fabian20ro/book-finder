@@ -913,6 +913,37 @@ describe('TextRecognizer', () => {
             expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
             expect(results).toEqual([{ text: 'Dark', confidence: 90 }]);
         });
+
+        it('invokes Tesseract when processed frame brightness equals minFrameBrightness exactly', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Build an all-black canvas — frameBrightness returns exactly 0.
+            const darkCanvas = document.createElement('canvas');
+            darkCanvas.width = 5;
+            darkCanvas.height = 5;
+            const dCtx = darkCanvas.getContext('2d')!;
+            const darkData = new Uint8ClampedArray(5 * 5 * 4); // all zeros — a black canvas
+            dCtx.putImageData({ data: new Uint8ClampedArray(darkData), width: 5, height: 5, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            mockRecognize.mockResolvedValue({ data: { lines: [{ text: 'Dark Frame', confidence: 90 }] } });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron', { minFrameBrightness: 0 });
+
+            const results = await recognizer.recognize(darkCanvas);
+
+            // The production short-circuit is strictly less-than (brightness < threshold).
+            // A frame whose brightness equals the threshold must still be recognized —
+            // this catches a regression flipping the comparison to <=.
+            expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
+            expect(results).toEqual([{ text: 'Dark Frame', confidence: 90 }]);
+        });
     });
 });
 
