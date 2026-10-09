@@ -556,6 +556,10 @@ function renderHomeBookList(): void {
 }
 
 function renderCandidateList(candidates: Book[]): void {
+    if (candidates.length === 0) {
+        bookPopupList.innerHTML = '<div class="empty-state">No matching books</div>';
+        return;
+    }
     bookPopupList.innerHTML = candidates.map((book) => `<div class="candidate-card">
             ${renderBookImage(book)}
             <div class="candidate-info">
