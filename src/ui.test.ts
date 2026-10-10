@@ -756,6 +756,7 @@ describe('ui', () => {
 
             const cards = document.querySelectorAll('.candidate-card');
             expect(cards).toHaveLength(1);
+            expect(document.getElementById('book-popup-list')!.querySelector('.empty-state')).toBeNull();
         });
 
         it('filters candidates by title case-insensitively with mixed-case input', () => {
@@ -1140,6 +1141,28 @@ describe('ui', () => {
             update({ candidateFilter: 'xyz' });
             const cards = document.querySelectorAll('.candidate-card');
             expect(cards).toHaveLength(0);
+
+            // Filter with zero matches shows the empty-state message
+            const list = document.getElementById('book-popup-list')!;
+            const empty = list.querySelector('.empty-state');
+            expect(empty).not.toBeNull();
+            expect(empty!.textContent).toContain('No matching books');
+        });
+
+        it('clearing a non-matching filter restores all candidate cards without empty state', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Alpha' }),
+                makeBook({ id: 'c2', title: 'Beta' }),
+            ]);
+            const list = document.getElementById('book-popup-list')!;
+
+            update({ candidateFilter: 'xyz' });
+            expect(list.querySelector('.empty-state')).not.toBeNull();
+
+            update({ candidateFilter: '' });
+            expect(list.querySelector('.empty-state')).toBeNull();
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(2);
         });
     });
 

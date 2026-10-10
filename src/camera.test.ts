@@ -372,6 +372,21 @@ describe('CameraManager', () => {
             camera.stop();
             expect(camera.isActive).toBe(false);
         });
+
+        it('is false when a stream is present but the video metadata is not ready', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            // start() leaves this.stream set and readyState=2. Force the video back to an
+            // unready state while keeping the stream alive. Every existing isActive test
+            // reaches "false" by nulling the stream (before start / after stop), so the
+            // `readyState >= 2` half of the conjunction (camera.ts line 96) has no direct
+            // assertion. This one does: the stream is non-null, so isActive can only be
+            // false via the readyState half — a regression that reduced isActive to
+            // `!!this.stream` would report true here for a camera with no loaded metadata.
+            Object.defineProperty(video, 'readyState', { value: 1, configurable: true });
+
+            expect(camera.isActive).toBe(false);
+        });
     });
 
     describe('getResolution', () => {

@@ -235,6 +235,20 @@ describe('parsing stored books', () => {
         expect(result[0].infoLink).toBe('https://books.google.com/x');
     });
 
+    it('preserves interior whitespace runs in title, trimming only the edges', () => {
+        const json = JSON.stringify([
+            { id: 'interior-ws', title: '  The  Unusually   Spaced   Title  ' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        // trim() removes only leading/trailing whitespace; a collapsing
+        // normalizer (e.g. replace(/\s+/g, ' ')) would reduce each interior
+        // run to a single space — all existing single-space fixtures pass it.
+        expect(result[0].title).toBe('The  Unusually   Spaced   Title');
+    });
+
     it('rejects non-string id/title values and filters null entries', () => {
         const json = JSON.stringify([
             // Boolean id — not a string, should be rejected

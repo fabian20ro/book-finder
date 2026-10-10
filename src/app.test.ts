@@ -651,6 +651,17 @@ describe('app', () => {
         expect(mockRecognize).not.toHaveBeenCalled();
     });
 
+    it('clears the isProcessingImage flag after the upload handler finishes', async () => {
+        const file = new File(['x'.repeat(1024)], 'large.jpg', { type: 'image/jpeg' });
+        Object.defineProperty(file, 'size', { value: 11 * 1024 * 1024 });
+
+        await capturedHandlers.onImageUpload(file);
+
+        // The handler must reset the flag in its finally block so the UI
+        // can re-enable the upload control and hide the busy state.
+        expect(getState().isProcessingImage).toBe(false);
+    });
+
     it('rejects non-image file types with a toast and no processing', async () => {
         let emittedMessage = '';
         const { on } = await import('./state');
@@ -690,9 +701,13 @@ describe('app', () => {
 
     it('shows a toast and does not call shareBooks when there are no books', async () => {
         const { shareBooks } = await import('./export');
+        let emittedMessage = '';
+        const { on } = await import('./state');
+        on('toast', (msg: string) => { emittedMessage = msg; });
 
         capturedHandlers.onShare();
 
+        expect(emittedMessage).toBe('No books to share');
         expect(shareBooks).not.toHaveBeenCalled();
     });
 

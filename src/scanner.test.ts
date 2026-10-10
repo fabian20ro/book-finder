@@ -625,6 +625,9 @@ describe('scanner', () => {
             expect(result).toHaveLength(1);
             expect(result[0].title).toBe('Book One');
             expect(consoleError).toHaveBeenCalledWith('Search failed for query "longtext1":', expect.any(Error));
+            // User-visible: the failed query also surfaces a per-query toast. Without this
+            // assertion, a regression that drops or mangles the toast would pass silently.
+            expect(state.toast).toHaveBeenCalledWith('Search error for "longtext1": API error');
         });
 
         it('does not send duplicate query when single line equals combined query (>= 8 chars)', async () => {
