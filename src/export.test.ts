@@ -410,6 +410,29 @@ describe('formatBooksAsText', () => {
         expect(lines[2]).toContain('ISBN: X-999');
         expect(lines[2]).toContain('Special');
     });
+
+    it('includes the info link when present', () => {
+        const result = formatBooksAsText([makeBook({ infoLink: 'https://books.google.com/books?id=abc' })]);
+        expect(result).toContain('Link: https://books.google.com/books?id=abc');
+    });
+
+    it('omits the link when infoLink is null', () => {
+        const result = formatBooksAsText([makeBook({ infoLink: null })]);
+        expect(result).not.toContain('Link:');
+    });
+
+    it('omits the link when infoLink is an empty string', () => {
+        const result = formatBooksAsText([makeBook({ infoLink: '' })]);
+        expect(result).not.toContain('Link:');
+    });
+
+    it('places the link after the page count and before the confidence suffix', () => {
+        const result = formatBooksAsText([makeBook({ infoLink: 'https://books.google.com/books?id=abc' })]);
+        const lines = result.split('\n');
+        expect(lines[1]).toBe(
+            'Author A - Test Book | Publisher: Publisher Co | ISBN: 9781234567890 | Published: 2024-01-01 | 300 pages | Link: https://books.google.com/books?id=abc (confidence 75)'
+        );
+    });
 });
 
 describe('shareBooks', () => {
