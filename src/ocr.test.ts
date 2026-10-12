@@ -397,6 +397,39 @@ describe('TextRecognizer', () => {
             expect(onSetLanguage).toHaveBeenCalledWith('eng');
         });
 
+        it('rolls back the language switch and rejects when the old worker termination fails', async () => {
+            const initWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn().mockRejectedValue(new Error('terminate failed')),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            const newWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn().mockResolvedValue(undefined),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            let callCount = 0;
+            vi.mocked(Tesseract.createWorker).mockImplementation(() => {
+                callCount++;
+                return Promise.resolve(callCount === 1 ? initWorker : newWorker);
+            });
+
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron', { onSetLanguage });
+            onSetLanguage.mockClear();
+
+            // Terminating the previous worker fails after the new worker has been assigned.
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('terminate failed');
+
+            // setLanguage rolls back as a whole: language and worker restore to the pre-switch state
+            // and the already-created new worker is cleaned up. A regression that committed the switch
+            // on cleanup failure would leave getLanguage() at 'eng' with the new worker in place.
+            expect(recognizer.getLanguage()).toBe('ron');
+            expect((recognizer as any).worker).toBe(initWorker);
+            expect(newWorker.terminate).toHaveBeenCalled();
+        });
+
         it('does not invoke onSetLanguage callback when setLanguage rolls back', async () => {
             const initWorker = {
                 recognize: vi.fn(),

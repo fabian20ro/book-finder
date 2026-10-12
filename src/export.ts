@@ -29,6 +29,9 @@ export function formatBooksAsText(books: Book[]): string {
         if (book.pageCount != null && book.pageCount > 0) {
             parts.push(`${book.pageCount} pages`);
         }
+        if (book.infoLink) {
+            parts.push(`Link: ${book.infoLink}`);
+        }
 
         let line = parts.join(' | ');
         if (book.confidence > 0) {
