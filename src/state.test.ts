@@ -302,6 +302,19 @@ describe('state', () => {
             expect(removeBook(100)).toBeNull();
         });
 
+        it('does not emit change when index is out of bounds', () => {
+            // With a book present, an out-of-bounds index must hit the guard and
+            // return before emit — so no spurious `change` event is fired. This
+            // mirrors the no-emit guard coverage already pinned for moveBook and
+            // removeCandidateById.
+            addBook(makeBook());
+            const listener = vi.fn();
+            on('change', listener);
+            removeBook(-1);
+            removeBook(999);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
         it('emits change event', () => {
             addBook(makeBook());
             const listener = vi.fn();
