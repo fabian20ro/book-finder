@@ -55,9 +55,18 @@ describe('exportToCsv', () => {
         expect(URL.createObjectURL).not.toHaveBeenCalled();
     });
 
-    it('creates CSV download with correct filename', () => {
-        exportToCsv([makeBook()]);
-        expect(clickedDownload).toBe('found_books.csv');
+    it('creates CSV download with date-stamped filename', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'));
+        try {
+            exportToCsv([makeBook()]);
+            // Pattern pins the zero-padded YYYY-MM-DD date and the .csv extension
+            expect(clickedDownload).toMatch(/^found_books_\d{4}-\d{2}-\d{2}\.csv$/);
+            // Date segment equals the controlled "today"; base name + extension via toBe
+            expect(clickedDownload).toBe('found_books_2026-01-15.csv');
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('creates a Blob with CSV content', () => {
