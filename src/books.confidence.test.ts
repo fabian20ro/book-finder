@@ -293,6 +293,14 @@ describe('Book scoring logic', () => {
     expect(computeConfidence(book, 0, 100, 'The Great Gatsby')).toBe(88);
   });
 
+  it('computeConfidence scales partial ratings linearly between the 0 and full caps', () => {
+    // Metadata 50 (full baseBook) + query '' (0) + round((4/5)*12)=10 + round((50/100)*8)=4 = 64.
+    // Existing rating tests only use extremes (0, 5, 10, -1, 100, 1000, undefined); a partial
+    // averageRating of 4 lands at 9.6, which rounds to 10. A wrong coefficient, a wrong
+    // denominator, or floor-instead-of-round would yield 8, 12, or 9 (total 62/66/63) and break this.
+    expect(computeConfidence(baseBook, 4, 50, '')).toBe(64);
+  });
+
   it('queryMatchRatio does not search publishedDate field', () => {
     const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: '2024', description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
     // Only publishedDate has searchable content; queryMatchRatio should ignore it

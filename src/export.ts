@@ -99,7 +99,8 @@ export function exportToCsv(books: Book[]): void {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'found_books.csv';
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `found_books_${date}.csv`;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
