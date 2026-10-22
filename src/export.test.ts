@@ -289,6 +289,31 @@ describe('exportToCsv', () => {
         expect(lines[0]).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL');
         expect(lines[1]).toBe('Test Book,Author A,9781234567890,Publisher Co,2024-01-01,300,A description,,75,');
     });
+
+    it('prepends a UTF-8 BOM to the CSV content so spreadsheets decode it as UTF-8', async () => {
+        exportToCsv([makeBook()]);
+
+        expect(capturedBlob).not.toBeNull();
+        const buf = await capturedBlob!.arrayBuffer();
+        // The BOM is the raw byte sequence EF BB BF at the very start of the file
+        const view = new DataView(buf);
+        expect(view.getUint8(0)).toBe(0xef);
+        expect(view.getUint8(1)).toBe(0xbb);
+        expect(view.getUint8(2)).toBe(0xbf);
+    });
+
+    it('keeps a non-ASCII title intact when the exported bytes are decoded as UTF-8', async () => {
+        const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL';
+        exportToCsv([makeBook({ title: 'C\u0103rarea' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        const buf = await capturedBlob!.arrayBuffer();
+        // TextDecoder defaults to ignoreBOM=false, stripping the leading BOM so the header is first
+        const decoded = new TextDecoder('utf-8').decode(buf);
+        expect(decoded.startsWith(header)).toBe(true);
+        // the multi-byte Romanian title round-trips through UTF-8 intact (no mojibake)
+        expect(decoded).toContain('C\u0103rarea');
+    });
 });
 
 describe('formatBooksAsText', () => {
