@@ -127,7 +127,11 @@ describe('app', () => {
     });
 
     it('initializes OCR engine on startup', () => {
-        expect(mockOcrInit).toHaveBeenCalled();
+        // init() runs once at module load (app.ts) and must preload the engine
+        // with the state's active language — a double init or a wrong language
+        // would be invisible to a bare toHaveBeenCalled().
+        expect(mockOcrInit).toHaveBeenCalledTimes(1);
+        expect(mockOcrInit).toHaveBeenCalledWith('ron');
     });
 
     it('all handlers are callable functions', () => {
