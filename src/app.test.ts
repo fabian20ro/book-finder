@@ -151,6 +151,19 @@ describe('app', () => {
         expect(stopScanning).toHaveBeenCalled();
     });
 
+    it('transitions to the scan view and starts the scanning loop once the camera is active', async () => {
+        const { startScanning } = await import('./scanner');
+        // After resetModules the re-imported app uses a fresh state module;
+        // read state from that same instance (the top-level getState is stale).
+        const { getState: freshGetState } = await import('./state');
+        vi.clearAllMocks();
+
+        await capturedHandlers.onStartCamera();
+
+        expect(startScanning).toHaveBeenCalledTimes(1);
+        expect(freshGetState().view).toBe('scan');
+    });
+
     it('loads saved autoScan preference from localStorage', async () => {
         localStorage.setItem('ftb-autoscan', 'true');
 
