@@ -648,6 +648,37 @@ describe('CameraManager', () => {
             expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: false });
         });
 
+        it('treats an undetermined ("prompt") permission state as requestable', async () => {
+            // The Permissions API has three standard states: granted, prompt, denied.
+            // The production branch (camera.ts requestCameraPermission) only demotes
+            // 'denied' and the non-standard 'blocked' to canRequestPermission=false;
+            // every existing test covers granted/denied/blocked, so 'prompt' — the
+            // state after a first visit where the user has not yet chosen — has no
+            // direct assertion. A regression that inverted the branch (e.g. treating
+            // `state !== 'granted'` as blocked) would tell a first-time user their
+            // camera is permanently blocked when it has simply not been asked for yet.
+            const query = vi.fn().mockResolvedValue({ state: 'prompt' as PermissionState });
+            vi.stubGlobal('navigator', {
+                ...navigator,
+                mediaDevices: {
+                    enumerateDevices: vi.fn().mockResolvedValue([
+                        { kind: 'videoinput', deviceId: 'cam1' },
+                    ]),
+                    getUserMedia: vi.fn(),
+                },
+                permissions: { query },
+            });
+
+            const camera = new CameraManager(video, canvas);
+            const result = await camera.requestCameraPermission();
+
+            expect(result).toEqual({ hasVideoDevice: true, canRequestPermission: true });
+            // The query must target the camera permission — a wrong name (e.g.
+            // 'microphone') would report another device's state, and no existing
+            // test asserts the payload.
+            expect(query).toHaveBeenCalledWith({ name: 'camera' });
+        });
+
         it('falls back to canRequestPermission:true when permissions query rejects (API unsupported)', async () => {
             // The Permissions API may exist but query() may reject (e.g. 'camera' is
             // not a queryable permission name on some platforms). The inner catch in

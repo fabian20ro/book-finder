@@ -87,6 +87,25 @@ describe('BookSearcher', () => {
             expect(fetch).toHaveBeenCalledTimes(1);
         });
 
+        it('deduplicates concurrent identical queries — the cache is registered before the network call', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(
+                googleBooksResponse([volume('v1', 'Test Book', ['Alice'])]),
+            ));
+
+            // Both calls start in the same tick: the first registers the
+            // normalized query in the cache before awaiting fetch, so the
+            // second is a cache hit and must never reach the API (Google
+            // Books quota conservation).
+            const first = searcher.search('concurrent query');
+            const second = searcher.search('concurrent query');
+            const [r1, r2] = await Promise.all([first, second]);
+
+            expect(fetch).toHaveBeenCalledTimes(1);
+            expect(r1).toHaveLength(1);
+            expect(r1[0].id).toBe('v1');
+            expect(r2).toEqual([]);
+        });
+
         it('deduplicates books by ID across multiple searches', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(
                 googleBooksResponse([volume('v1', 'Same Book')]),
