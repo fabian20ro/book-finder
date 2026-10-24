@@ -127,7 +127,11 @@ describe('app', () => {
     });
 
     it('initializes OCR engine on startup', () => {
-        expect(mockOcrInit).toHaveBeenCalled();
+        // init() runs once at module load (app.ts) and must preload the engine
+        // with the state's active language — a double init or a wrong language
+        // would be invisible to a bare toHaveBeenCalled().
+        expect(mockOcrInit).toHaveBeenCalledTimes(1);
+        expect(mockOcrInit).toHaveBeenCalledWith('ron');
     });
 
     it('all handlers are callable functions', () => {
@@ -149,6 +153,19 @@ describe('app', () => {
         await capturedHandlers.onStartCamera();
         await capturedHandlers.onStopCamera();
         expect(stopScanning).toHaveBeenCalled();
+    });
+
+    it('transitions to the scan view and starts the scanning loop once the camera is active', async () => {
+        const { startScanning } = await import('./scanner');
+        // After resetModules the re-imported app uses a fresh state module;
+        // read state from that same instance (the top-level getState is stale).
+        const { getState: freshGetState } = await import('./state');
+        vi.clearAllMocks();
+
+        await capturedHandlers.onStartCamera();
+
+        expect(startScanning).toHaveBeenCalledTimes(1);
+        expect(freshGetState().view).toBe('scan');
     });
 
     it('loads saved autoScan preference from localStorage', async () => {
@@ -211,12 +228,20 @@ describe('app', () => {
     });
 
     it('keeps the previous OCR language when a switch fails', async () => {
+        // Re-import state after beforeEach's resetModules: the top-level getState
+        // is bound to the pre-reset instance and would read the untouched default
+        // 'ron' regardless of what the fresh app's handler actually does.
+        const { getState: freshGetState, on } = await import('./state');
+        let emittedMessage = '';
+        on('toast', (msg: string) => { emittedMessage = msg; });
         const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
         mockSetLanguage.mockRejectedValueOnce(new Error('language download failed'));
 
         await capturedHandlers.onLanguageChange('eng');
 
-        expect(getState().ocrLanguage).toBe('ron');
+        expect(freshGetState().ocrLanguage).toBe('ron');
+        expect(freshGetState().isChangingLanguage).toBe(false);
+        expect(emittedMessage).toBe('Failed to load language data. Check your connection.');
         expect(localStorage.getItem('ftb-language')).toBeNull();
         expect(mockSetLanguage).toHaveBeenCalledWith('eng');
         expect(consoleError).toHaveBeenCalledWith('Language change failed:', expect.any(Error));
