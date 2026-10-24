@@ -765,4 +765,24 @@ describe('ocr utilities', () => {
             expect((recognizer as any).isProcessing).toBe(false);
         });
     });
+
+    describe('TextRecognizer.destroy', () => {
+        let recognizer: TextRecognizer;
+
+        beforeEach(() => {
+            recognizer = new TextRecognizer();
+        });
+
+        it('resolves as a no-op when called before init (no worker)', async () => {
+            // destroy() guards with `if (this.worker)`, so it must be safe at every
+            // lifecycle stage: on a never-initialized recognizer (worker === null)
+            // it skips terminate entirely and resolves cleanly instead of throwing a
+            // null-dereference TypeError. All existing destroy tests run on an
+            // initialized recognizer, so this false side of the guard is unexercised;
+            // a regression that drops the guard (unconditional this.worker.terminate())
+            // would reject here and fail the assertion.
+            await expect(recognizer.destroy()).resolves.toBeUndefined();
+            expect((recognizer as any).worker).toBeNull();
+        });
+    });
 });
