@@ -60,10 +60,10 @@ describe('exportToCsv', () => {
         vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'));
         try {
             exportToCsv([makeBook()]);
-            // Pattern pins the zero-padded YYYY-MM-DD date and the .csv extension
-            expect(clickedDownload).toMatch(/^found_books_\d{4}-\d{2}-\d{2}\.csv$/);
-            // Date segment equals the controlled "today"; base name + extension via toBe
-            expect(clickedDownload).toBe('found_books_2026-01-15.csv');
+            // Pattern pins the record count, zero-padded YYYY-MM-DD date, and the .csv extension
+            expect(clickedDownload).toMatch(/^found_books_\d+_\d{4}-\d{2}-\d{2}\.csv$/);
+            // Count=1 for a single-book export; date segment equals the controlled "today"
+            expect(clickedDownload).toBe('found_books_1_2026-01-15.csv');
         } finally {
             vi.useRealTimers();
         }
