@@ -214,6 +214,55 @@ describe('scanner', () => {
         });
     });
 
+    describe('scanFrame (dark frame)', () => {
+        // scanFrame is module-private; drive it the same way the loop does:
+        // startScanning + fake timers, toggling the shared frameBrightness mock.
+        afterEach(() => {
+            (ocrModule.frameBrightness as any).mockReturnValue(128);
+            state.update({ candidateBooks: [] });
+        });
+
+        it('toasts "Scene too dark" once on the first dark frame, then stays silent on subsequent dark frames', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera(document.createElement('canvas'));
+            const ocr = createMockOcr();
+            const books = createMockBookSearcher();
+            (ocrModule.frameBrightness as any).mockReturnValue(0);
+
+            startScanning(camera as any, ocr as any, books as any);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(state.toast).toHaveBeenCalledTimes(1);
+            expect(state.toast).toHaveBeenCalledWith('Scene too dark — try better lighting');
+
+            (ocrModule.frameBrightness as any).mockReturnValue(5);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(state.toast).toHaveBeenCalledTimes(1);
+        });
+
+        it('re-toasts when a dark frame follows a non-dark frame', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera(document.createElement('canvas'));
+            const ocr = createMockOcr([]);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+            (ocrModule.frameBrightness as any).mockReturnValue(0);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(state.toast).toHaveBeenCalledTimes(1);
+
+            // Scene brightens: no dark toast on a non-dark frame.
+            (ocrModule.frameBrightness as any).mockReturnValue(128);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(state.toast).toHaveBeenCalledTimes(1);
+
+            // Scene darkens again: the transition guard re-fires the toast.
+            (ocrModule.frameBrightness as any).mockReturnValue(3);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(state.toast).toHaveBeenCalledTimes(2);
+            expect(state.toast).toHaveBeenCalledWith('Scene too dark — try better lighting');
+        });
+    });
+
     describe('scanOnce', () => {
         it('successfully scans and finds books', async () => {
             state.update({ autoScan: false });
