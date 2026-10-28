@@ -13,6 +13,9 @@ const MAX_QUERIES_PER_SCAN = 5;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let isPaused = false;
 let visibilityHandler: (() => void) | null = null;
+// Tracks the previous frame's darkness so the "too dark" toast fires only on
+// the dark transition, not on every dark frame of a sustained dark sequence.
+let wasDark = false;
 
 export function startScanning(
     camera: CameraManager,
@@ -32,6 +35,7 @@ export function startScanning(
 
     update({ isScanning: true });
     isPaused = false;
+    wasDark = false;
 
     // Only auto-schedule if autoScan is enabled
     if (getState().autoScan) {
@@ -53,6 +57,7 @@ export function stopScanning(): void {
         visibilityHandler = null;
     }
     isPaused = false;
+    wasDark = false;
     update({ isScanning: false });
 }
 
@@ -156,9 +161,16 @@ async function scanFrame(
 
         // Skip dark frames — avoids wasting OCR time on garbage input
         if (frameBrightness(canvas) < MIN_BRIGHTNESS) {
+            // Toast once when the scene just got dark (mirrors scanOnce) so a
+            // dim room is explained instead of looking like a frozen counter.
+            if (!wasDark) {
+                toast('Scene too dark — try better lighting');
+            }
+            wasDark = true;
             scheduleNext(camera, ocr, bookSearcher);
             return;
         }
+        wasDark = false;
 
         // OCR with timeout
         const ocrLines = await withTimeout(
