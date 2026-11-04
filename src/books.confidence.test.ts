@@ -364,6 +364,45 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher.parseBook treats an empty-string ISBN_13 identifier as absent, falling through to ISBN_10', async () => {
+    // books.ts ISBN chain is a truthiness chain (isbn13?.identifier || isbn10?.identifier || ...),
+    // so a present-but-empty ISBN_13 identifier must not win. The "prefers ISBN_13" test above
+    // pins the ordering for valid values; this pins the falsy branch, which a presence-based
+    // rewrite (isbn13 ? isbn13.identifier : ...) would break, yielding isbn ''.
+    const mockResponse = {
+      items: [
+        {
+          id: 'empty-isbn13-test',
+          volumeInfo: {
+            title: 'Empty ISBN13 Test Book',
+            authors: ['Test Author'],
+            industryIdentifiers: [
+              { type: 'ISBN_10', identifier: '0743276540' },
+              { type: 'ISBN_13', identifier: '' },
+            ],
+          },
+        },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('Empty ISBN13 Test');
+      expect(results.length).toBe(1);
+      // The empty ISBN_13 identifier is falsy, so the chain must land on ISBN_10.
+      expect(results[0].isbn).toBe('0743276540');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('BookSearcher.parseBook falls back to first identifier when no ISBN_10/13', async () => {
     const mockResponse = {
       items: [
