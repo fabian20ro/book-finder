@@ -187,6 +187,11 @@ async function scanFrame(
             toast(`Found ${allNewBooks.length} book(s)`);
         } else if (ocrLines.length > 0) {
             toast('No new books found');
+        } else {
+            // Mirrors scanOnce's empty-OCR toast so a bright frame with no
+            // text explains the silent counter increment instead of looking
+            // like a frozen scanner.
+            toast('No text detected');
         }
     } catch (err) {
         handleScanError(err, 'Scan frame error:', ocr);

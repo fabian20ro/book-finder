@@ -250,16 +250,40 @@ describe('scanner', () => {
             await vi.advanceTimersByTimeAsync(2000);
             expect(state.toast).toHaveBeenCalledTimes(1);
 
-            // Scene brightens: no dark toast on a non-dark frame.
+            // Scene brightens: no dark toast on a non-dark frame. The empty
+            // OCR result now toasts "No text detected" (mirrors scanOnce),
+            // so the dark toast count stays at 1 but the toast mock fires
+            // once more for the empty bright frame.
             (ocrModule.frameBrightness as any).mockReturnValue(128);
             await vi.advanceTimersByTimeAsync(2000);
-            expect(state.toast).toHaveBeenCalledTimes(1);
+            expect(state.toast).toHaveBeenCalledTimes(2);
+            expect(state.toast).toHaveBeenNthCalledWith(1, 'Scene too dark — try better lighting');
+            expect(state.toast).toHaveBeenNthCalledWith(2, 'No text detected');
 
             // Scene darkens again: the transition guard re-fires the toast.
             (ocrModule.frameBrightness as any).mockReturnValue(3);
             await vi.advanceTimersByTimeAsync(2000);
-            expect(state.toast).toHaveBeenCalledTimes(2);
-            expect(state.toast).toHaveBeenCalledWith('Scene too dark — try better lighting');
+            expect(state.toast).toHaveBeenCalledTimes(3);
+            expect(state.toast).toHaveBeenLastCalledWith('Scene too dark — try better lighting');
+        });
+    });
+
+    describe('scanFrame (bright frame, no text)', () => {
+        // scanFrame is module-private; drive it the way the loop does:
+        // startScanning + fake timers with a bright frame and empty OCR output.
+        it('toasts "No text detected" and keeps incrementing scanCount', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera(document.createElement('canvas'));
+            const ocr = createMockOcr([]);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(state.toast).toHaveBeenCalledTimes(1);
+            expect(state.toast).toHaveBeenCalledWith('No text detected');
+            expect(state.getState().scanCount).toBe(1);
+            expect(state.getState().candidateBooks).toHaveLength(0);
         });
     });
 
