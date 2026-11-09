@@ -314,11 +314,12 @@ describe('BookSearcher', () => {
             expect(results[0].thumbnailUrl).toBe('https://books.google.com/thumb.jpg');
         });
 
-        it('rejects volumes with missing or empty id', async () => {
+        it('rejects volumes with missing, empty, or non-string id', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
                 { volumeInfo: { title: 'No ID Book' } }, // no id field
                 { id: '', volumeInfo: { title: 'Empty ID Book' } },
                 { id: '   ', volumeInfo: { title: 'Whitespace ID Book' } },
+                { id: 42, volumeInfo: { title: 'Numeric ID Book' } }, // non-string id
                 { id: 'valid-id', volumeInfo: { title: 'Valid Book' } },
             ])));
 
