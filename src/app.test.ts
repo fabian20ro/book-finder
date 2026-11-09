@@ -142,10 +142,14 @@ describe('app', () => {
     });
 
     it('calls scanOnce when onManualScan is triggered (if camera is active)', async () => {
-        const { scanOnce } = await import('./scanner');
+        const { scanOnce, startScanning } = await import('./scanner');
         await capturedHandlers.onStartCamera();
         await capturedHandlers.onManualScan();
-        expect(scanOnce).toHaveBeenCalled();
+        expect(scanOnce).toHaveBeenCalledTimes(1);
+        // A manual scan must run with the same live camera / OCR / book
+        // dependencies the scanning loop received — a stale or null
+        // dependency would still pass a bare toHaveBeenCalled().
+        expect(scanOnce).toHaveBeenCalledWith(...vi.mocked(startScanning).mock.calls[0]);
     });
 
     it('calls stopScanning when onStopCamera is triggered', async () => {
