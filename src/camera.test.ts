@@ -421,6 +421,30 @@ describe('CameraManager', () => {
             expect(video.srcObject).toBeNull();
         });
 
+        it('stops every track in a multi-track stream', async () => {
+            // createMockStream() exposes exactly one track, so the previous case cannot
+            // distinguish getTracks().forEach(stop) from a regression that stops only the
+            // first track. Both tracks of a two-track stream must be stopped — a leaked
+            // track keeps the camera (and its indicator) running after the user stops.
+            const track1 = { stop: vi.fn(), addEventListener: vi.fn(), enabled: true };
+            const track2 = { stop: vi.fn(), addEventListener: vi.fn(), enabled: true };
+            const twoTrackStream = {
+                getTracks: () => [track1, track2],
+                getVideoTracks: () => [track1, track2],
+            } as unknown as MediaStream;
+            (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
+                twoTrackStream,
+            );
+
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            camera.stop();
+
+            expect(track1.stop).toHaveBeenCalledTimes(1);
+            expect(track2.stop).toHaveBeenCalledTimes(1);
+            expect(video.srcObject).toBeNull();
+        });
+
         it('is safe to call when not started', () => {
             const camera = new CameraManager(video, canvas);
             camera.stop(); // should not throw
