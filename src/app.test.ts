@@ -750,6 +750,28 @@ describe('app', () => {
         expect(getState().books).toHaveLength(0);
     });
 
+    it('requires explicit confirmation before clearing books, then persists the empty library', async () => {
+        // The handler operates on the module registry that app.ts re-imports after
+        // vi.resetModules(), so read state through the same dynamic import it uses.
+        const { addBook, getState: getFreshState } = await import('./state');
+        addBook({ id: 'cl-1', title: 'Library Book 1', authors: [] } as any);
+        addBook({ id: 'cl-2', title: 'Library Book 2', authors: [] } as any);
+        const confirmSpy = vi.spyOn(window, 'confirm')
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
+
+        // A declined confirmation must leave the library intact.
+        capturedHandlers.onClear();
+        expect(confirmSpy).toHaveBeenLastCalledWith('Remove all 2 books?');
+        expect(getFreshState().books).toHaveLength(2);
+        expect(JSON.parse(localStorage.getItem('ftb-books')!)).toHaveLength(2);
+
+        // An accepted confirmation clears the library and persists the empty list.
+        capturedHandlers.onClear();
+        expect(getFreshState().books).toHaveLength(0);
+        expect(localStorage.getItem('ftb-books')).toBe('[]');
+    });
+
     it('keeps ocrReady false and logs error when OCR preload fails at startup', async () => {
         const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
         mockOcrInit.mockRejectedValueOnce(new Error('Tesseract.js failed to load'));
