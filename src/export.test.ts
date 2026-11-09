@@ -69,6 +69,22 @@ describe('exportToCsv', () => {
         }
     });
 
+    it('embeds the exported book count in the filename for multiple books', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-02-20T08:30:00.000Z'));
+        try {
+            exportToCsv([
+                makeBook({ title: 'Book One' }),
+                makeBook({ id: 'b2', title: 'Book Two' }),
+            ]);
+            // Two exported rows must yield count "2" — a hardcoded count or a
+            // dropped count segment still passes the single-book filename test above
+            expect(clickedDownload).toBe('found_books_2_2026-02-20.csv');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('creates a Blob with CSV content', () => {
         exportToCsv([makeBook()]);
         expect(capturedBlob).not.toBeNull();

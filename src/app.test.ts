@@ -142,17 +142,26 @@ describe('app', () => {
     });
 
     it('calls scanOnce when onManualScan is triggered (if camera is active)', async () => {
-        const { scanOnce } = await import('./scanner');
+        const { scanOnce, startScanning } = await import('./scanner');
         await capturedHandlers.onStartCamera();
         await capturedHandlers.onManualScan();
-        expect(scanOnce).toHaveBeenCalled();
+        expect(scanOnce).toHaveBeenCalledTimes(1);
+        // A manual scan must run with the same live camera / OCR / book
+        // dependencies the scanning loop received — a stale or null
+        // dependency would still pass a bare toHaveBeenCalled().
+        expect(scanOnce).toHaveBeenCalledWith(...vi.mocked(startScanning).mock.calls[0]);
     });
 
-    it('calls stopScanning when onStopCamera is triggered', async () => {
+    it('calls stopScanning exactly once and returns the view to home when onStopCamera is triggered', async () => {
         const { stopScanning } = await import('./scanner');
+        const { getState: freshGetState } = await import('./state');
         await capturedHandlers.onStartCamera();
+        expect(freshGetState().view).toBe('scan');
         await capturedHandlers.onStopCamera();
-        expect(stopScanning).toHaveBeenCalled();
+        expect(stopScanning).toHaveBeenCalledTimes(1);
+        // A bare toHaveBeenCalled() would still pass if the handler skipped
+        // the view reset — the user would be stranded on the scan screen.
+        expect(freshGetState().view).toBe('home');
     });
 
     it('transitions to the scan view and starts the scanning loop once the camera is active', async () => {
@@ -748,6 +757,28 @@ describe('app', () => {
         capturedHandlers.onClear();
 
         expect(getState().books).toHaveLength(0);
+    });
+
+    it('requires explicit confirmation before clearing books, then persists the empty library', async () => {
+        // The handler operates on the module registry that app.ts re-imports after
+        // vi.resetModules(), so read state through the same dynamic import it uses.
+        const { addBook, getState: getFreshState } = await import('./state');
+        addBook({ id: 'cl-1', title: 'Library Book 1', authors: [] } as any);
+        addBook({ id: 'cl-2', title: 'Library Book 2', authors: [] } as any);
+        const confirmSpy = vi.spyOn(window, 'confirm')
+            .mockReturnValueOnce(false)
+            .mockReturnValueOnce(true);
+
+        // A declined confirmation must leave the library intact.
+        capturedHandlers.onClear();
+        expect(confirmSpy).toHaveBeenLastCalledWith('Remove all 2 books?');
+        expect(getFreshState().books).toHaveLength(2);
+        expect(JSON.parse(localStorage.getItem('ftb-books')!)).toHaveLength(2);
+
+        // An accepted confirmation clears the library and persists the empty list.
+        capturedHandlers.onClear();
+        expect(getFreshState().books).toHaveLength(0);
+        expect(localStorage.getItem('ftb-books')).toBe('[]');
     });
 
     it('keeps ocrReady false and logs error when OCR preload fails at startup', async () => {
