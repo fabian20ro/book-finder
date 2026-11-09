@@ -152,11 +152,16 @@ describe('app', () => {
         expect(scanOnce).toHaveBeenCalledWith(...vi.mocked(startScanning).mock.calls[0]);
     });
 
-    it('calls stopScanning when onStopCamera is triggered', async () => {
+    it('calls stopScanning exactly once and returns the view to home when onStopCamera is triggered', async () => {
         const { stopScanning } = await import('./scanner');
+        const { getState: freshGetState } = await import('./state');
         await capturedHandlers.onStartCamera();
+        expect(freshGetState().view).toBe('scan');
         await capturedHandlers.onStopCamera();
-        expect(stopScanning).toHaveBeenCalled();
+        expect(stopScanning).toHaveBeenCalledTimes(1);
+        // A bare toHaveBeenCalled() would still pass if the handler skipped
+        // the view reset — the user would be stranded on the scan screen.
+        expect(freshGetState().view).toBe('home');
     });
 
     it('transitions to the scan view and starts the scanning loop once the camera is active', async () => {
