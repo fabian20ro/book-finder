@@ -55,6 +55,23 @@ describe('exportToCsv', () => {
         expect(URL.createObjectURL).not.toHaveBeenCalled();
     });
 
+    it('calls notify with the confirmation message after the download is triggered', () => {
+        const notify = vi.fn<(msg: string) => void>();
+
+        exportToCsv([makeBook()], notify);
+
+        expect(notify).toHaveBeenCalledTimes(1);
+        expect(notify).toHaveBeenCalledWith('Book list downloaded');
+    });
+
+    it('does not call notify when book array is empty', () => {
+        const notify = vi.fn<(msg: string) => void>();
+
+        exportToCsv([], notify);
+
+        expect(notify).not.toHaveBeenCalled();
+    });
+
     it('creates CSV download with date-stamped filename', () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'));

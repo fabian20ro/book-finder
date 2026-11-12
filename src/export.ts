@@ -74,7 +74,7 @@ export async function shareBooks(books: Book[], notify: (msg: string) => void): 
     }
 }
 
-export function exportToCsv(books: Book[]): void {
+export function exportToCsv(books: Book[], notify?: (msg: string) => void): void {
     if (books.length === 0) return;
 
     const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count,Description,Info Link,Confidence,Thumbnail URL';
@@ -106,4 +106,6 @@ export function exportToCsv(books: Book[]): void {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    notify?.('Book list downloaded');
 }
