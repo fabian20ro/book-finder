@@ -1,5 +1,5 @@
 import 'vitest-canvas-mock';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { preprocessCanvas, frameBrightness, TextRecognizer } from './ocr';
 
 // Minimal mock for Canvas/Context to avoid library overhead
@@ -763,6 +763,50 @@ describe('ocr utilities', () => {
 
             await recognizer.recognize(canvas);
             expect((recognizer as any).isProcessing).toBe(false);
+        });
+    });
+
+    describe('TextRecognizer.init', () => {
+        let mockWorker: any;
+        let tesseractMock: any;
+
+        beforeEach(() => {
+            mockWorker = {
+                recognize: vi.fn().mockResolvedValue({ data: { lines: [] } }),
+                setParameters: vi.fn().mockResolvedValue({}),
+                terminate: vi.fn().mockResolvedValue(undefined),
+            };
+            tesseractMock = { createWorker: vi.fn().mockResolvedValue(mockWorker) };
+            vi.stubGlobal('Tesseract', tesseractMock);
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        it('completes for a language without a configured whitelist without calling setParameters', async () => {
+            // init() intentionally accepts any Tesseract language (unlike setLanguage(), which
+            // rejects languages outside LANG_WHITELISTS), and applyWhitelist() skips
+            // setParameters entirely when the language has no whitelist entry (e.g. 'jpn').
+            // Init must still succeed for such languages: the worker is retained, currentLang
+            // is recorded, onSetLanguage fires, and the recognizer becomes usable — all without
+            // a setParameters call. A regression that unconditionally pushes the (undefined)
+            // whitelist parameter would silently call setParameters for non-whitelisted
+            // languages, corrupting their character set; no assertion in any test file covers
+            // that branch today.
+            const onSetLanguage = vi.fn();
+            const recognizer = new TextRecognizer();
+            await recognizer.init('jpn', { onSetLanguage });
+
+            expect(tesseractMock.createWorker).toHaveBeenCalledWith('jpn');
+            expect(mockWorker.setParameters).not.toHaveBeenCalled();
+            expect(onSetLanguage).toHaveBeenCalledWith('jpn');
+            expect(recognizer.getLanguage()).toBe('jpn');
+
+            // Worker survived init: the recognizer is immediately usable for that language.
+            const result = await recognizer.recognize(canvas);
+            expect(result).toEqual([]);
+            expect(mockWorker.recognize).toHaveBeenCalledTimes(1);
         });
     });
 
