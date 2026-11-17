@@ -129,6 +129,7 @@ describe('ui', () => {
         setupDOM();
         handlers = createHandlers();
         initUI(handlers);
+        expect(document.getElementById('home-book-count')!.getAttribute('aria-live')).toBe('polite');
     });
 
     afterEach(() => {
