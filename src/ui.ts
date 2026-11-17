@@ -133,6 +133,7 @@ export function initUI(handlers: UIHandlers): void {
     photoInput = $as('#photo-input', HTMLInputElement);
     homeProcessing = $('#home-processing');
     homeBookCount = $('#home-book-count');
+    homeBookCount.setAttribute('aria-live', 'polite');
     homeBookList = $('#home-book-list');
     btnHomeShare = $('#btn-home-share');
     btnHomeExport = $('#btn-home-export');
