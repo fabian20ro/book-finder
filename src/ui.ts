@@ -8,6 +8,7 @@ const CONFIDENCE_HIGH_THRESHOLD = 70;
 const CONFIDENCE_MID_THRESHOLD = 40;
 
 const NO_COVER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E";
+const NO_TEXT_DETECTED = 'No text detected';
 
 // --- Language data ---
 
@@ -398,9 +399,11 @@ function renderUI(): void {
     scanStatusEl.className = state.isScanning ? 'scan-active' : 'scan-paused';
 
     // Last detected text
-    const displayText = state.lastDetectedText.length > MAX_DISPLAY_TEXT_LENGTH
-        ? state.lastDetectedText.substring(0, MAX_DISPLAY_TEXT_LENGTH) + '...'
-        : state.lastDetectedText;
+    const displayText = state.lastDetectedText.length === 0
+        ? NO_TEXT_DETECTED
+        : state.lastDetectedText.length > MAX_DISPLAY_TEXT_LENGTH
+            ? state.lastDetectedText.substring(0, MAX_DISPLAY_TEXT_LENGTH) + '...'
+            : state.lastDetectedText;
     lastTextEl.textContent = displayText;
 
     // Scan view book count

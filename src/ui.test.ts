@@ -459,6 +459,16 @@ describe('ui', () => {
             expect(text).toHaveLength(63);
             expect(text.endsWith('...')).toBe(true);
         });
+
+        it('shows "No text detected" when no OCR text exists', () => {
+            update({ lastDetectedText: '' });
+            expect(document.getElementById('last-text')!.textContent).toBe('No text detected');
+        });
+
+        it('shows the detected text for non-empty OCR output', () => {
+            update({ lastDetectedText: 'The Great Gatsby' });
+            expect(document.getElementById('last-text')!.textContent).toBe('The Great Gatsby');
+        });
     });
 
     describe('image processing state', () => {
