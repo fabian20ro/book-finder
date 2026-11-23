@@ -573,8 +573,9 @@ describe('app', () => {
         capturedHandlers.onAddCandidate('dup-1');
 
         expect(getTestState().candidateBooks.length).toBe(0);
-        // The toast must fire with a duplicate-aware message so the user knows the book was blocked, not just noted.
-        expect(emittedMessage).toContain('duplicate');
+        // The toast must carry the exact duplicate wording (title + skipped action) so a
+        // reworded or truncated message — which a substring check would let through — fails.
+        expect(emittedMessage).toBe('Already Found is already a duplicate — skipped');
     });
 
     it('silently does nothing when onAddCandidate receives an unknown bookId', async () => {
