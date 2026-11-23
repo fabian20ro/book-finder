@@ -177,6 +177,24 @@ describe('app', () => {
         expect(freshGetState().view).toBe('scan');
     });
 
+    it('restarts the scanning loop and returns to the scan view when onRetry is triggered', async () => {
+        const { startScanning } = await import('./scanner');
+        // After resetModules the re-imported app uses a fresh state module;
+        // read state from that same instance (the top-level getState is stale).
+        const { getState: freshGetState } = await import('./state');
+        vi.clearAllMocks();
+
+        await capturedHandlers.onStartCamera();
+        expect(startScanning).toHaveBeenCalledTimes(1);
+
+        // Retry is the only escape from the error overlay shown when camera
+        // start fails; a no-op or mis-wired retry would never restart the loop.
+        await capturedHandlers.onRetry();
+
+        expect(startScanning).toHaveBeenCalledTimes(2);
+        expect(freshGetState().view).toBe('scan');
+    });
+
     it('loads saved autoScan preference from localStorage', async () => {
         localStorage.setItem('ftb-autoscan', 'true');
 
