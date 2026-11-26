@@ -55,13 +55,36 @@ describe('exportToCsv', () => {
         expect(URL.createObjectURL).not.toHaveBeenCalled();
     });
 
-    it('calls notify with the confirmation message after the download is triggered', () => {
+    it('calls notify with the filename-inclusive confirmation message after the download is triggered', () => {
         const notify = vi.fn<(msg: string) => void>();
 
         exportToCsv([makeBook()], notify);
 
         expect(notify).toHaveBeenCalledTimes(1);
-        expect(notify).toHaveBeenCalledWith('Book list downloaded');
+        // Pattern pins count=1, zero-padded YYYY-MM-DD date (real clock), and the .csv
+        // extension — a generic message or a dropped filename segment fails here
+        expect(notify).toHaveBeenCalledWith(
+            expect.stringMatching(/^Downloaded found_books_1_\d{4}-\d{2}-\d{2}\.csv$/)
+        );
+    });
+
+    it('calls notify with a string containing the generated filename for multiple books', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-10T09:00:00.000Z'));
+        try {
+            const notify = vi.fn<(msg: string) => void>();
+            exportToCsv([
+                makeBook(),
+                makeBook({ id: 'b2' }),
+                makeBook({ id: 'b3' }),
+            ], notify);
+            expect(notify).toHaveBeenCalledTimes(1);
+            expect(notify).toHaveBeenCalledWith(
+                expect.stringContaining('found_books_3_2026-03-10.csv')
+            );
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('does not call notify when book array is empty', () => {
