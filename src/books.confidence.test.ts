@@ -932,6 +932,16 @@ describe('Book scoring logic', () => {
       // itself — a poorly documented book with a large rating pool must not over-score.
       expect(computeConfidence(book, undefined, 1000, '')).toBe(28);
     });
+
+    it('treats a negative ratingsCount as no contribution, not a negative one', () => {
+      const book = mkBook({ id: 'partial-11', title: 'Some Book', authors: ['A'] });
+      // The documented breakdown says "ratingsCount contributes up to 8" — a negative
+      // count is out of domain and must be excluded like a zero count, not subtracted.
+      // Without the `> 0` guard the contribution would be
+      // round(min(-50, 100)/100 * 8) = -4, deflating the score to 28 instead of 32
+      // (20 metadata + 12 for rating 5).
+      expect(computeConfidence(book, 5, -50, '')).toBe(32);
+    });
   });
 
   describe('isISBN', () => {
