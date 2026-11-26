@@ -540,6 +540,46 @@ describe('CameraManager', () => {
             await expect(camera.start()).resolves.toBeUndefined();
         });
 
+        it('resolves when metadata arrives late but within the timeout window', async () => {
+            // Queue the loadedmetadata event ~3s after the stream is attached: slow,
+            // but inside the 5s fail-fast deadline. The previous resolve test settles
+            // synchronously via the readyState >= 2 branch, so neither it nor the
+            // timeout test exercises the event branch with a delayed settlement.
+            // This pins the race boundary: a within-deadline settlement must win.
+            // A regression that shortens the 5000ms constant below the metadata
+            // latency would pass every existing test (which settle at t=0 or never)
+            // but would reject real cameras whose metadata takes 2-5s to load.
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {
+                    Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true });
+                    Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
+                    setTimeout(() => {
+                        Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
+                        video.dispatchEvent(new Event('loadedmetadata'));
+                    }, 3000);
+                },
+                configurable: true,
+            });
+
+            vi.useFakeTimers();
+
+            const camera = new CameraManager(video, canvas);
+            const startPromise = camera.start().catch((err: unknown) => err);
+
+            try {
+                await vi.advanceTimersByTimeAsync(3000);
+            } finally {
+                vi.useRealTimers();
+            }
+
+            const result = await startPromise;
+
+            expect(result).toBeUndefined();
+            expect(canvas.width).toBe(1920);
+            expect(canvas.height).toBe(1080);
+        });
+
         it('rejects after timeout when the inner promise never settles', async () => {
             // Block the mock's srcObject setter from firing its microtask.
             Object.defineProperty(video, 'srcObject', {

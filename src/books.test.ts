@@ -267,6 +267,35 @@ describe('BookSearcher', () => {
             expect(results[0].confidence).toBe(0);
         });
 
+        it('parses volume without volumeInfo object as Unknown Title book', async () => {
+            // Google Books occasionally returns volumes with no volumeInfo object at all.
+            // The defensive `item.volumeInfo || {}` guard keeps such sparse volumes
+            // parseable; losing it would throw while reading metadata and drop the
+            // entire search result for that OCR frame, not just the sparse entry.
+            // (The test above only exercises the truthy side with `volumeInfo: {}`.)
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
+                { id: 'v-sparse' },
+            ])));
+
+            const results = await searcher.search('sparse volume');
+
+            expect(results).toEqual([
+                {
+                    id: 'v-sparse',
+                    title: 'Unknown Title',
+                    authors: [],
+                    publisher: null,
+                    publishedDate: null,
+                    description: null,
+                    isbn: null,
+                    pageCount: null,
+                    thumbnailUrl: null,
+                    infoLink: null,
+                    confidence: 0,
+                },
+            ]);
+        });
+
         it('includes ratings in confidence when available', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
                 {
